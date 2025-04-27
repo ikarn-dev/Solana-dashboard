@@ -87,24 +87,47 @@ export interface Validator {
 // General Info Types
 export interface GeneralInfo {
   activatedStake: number;
-  avgBlockTime: number;
+  avgBlockTime_24h: number;
+  avgBlockTime_1h: number;
+  avgBlockTime_1min: number;
   circulatingSupply: number;
   dailyPriceChange: number;
-  dailyRewards: number;
-  epoch: number;
-  epochProgress: number;
-  inflationRate: number;
-  lastBlockTime: number;
-  lastPrice: number;
-  marketCap: number;
-  nonCirculatingSupply: number;
-  slot: number;
+  dailyVolume: number;
+  delinquentStake: number;
+  epochInfo: {
+    absoluteEpochStartSlot: number;
+    absoluteSlot: number;
+    blockHeight: number;
+    epoch: number;
+    slotIndex: number;
+    slotsInEpoch: number;
+    epochStartTime: number;
+  };
   stakingYield: number;
-  stakingYieldAdjusted: number;
+  tokenPrice: number;
   totalDelegatedStake: number;
   totalSupply: number;
-  totalValidators: number;
-  volume24h: number;
+  avgLastVote: number;
+  epoch: number;
+  skipRate: {
+    skipRate: number;
+    stakeWeightedSkipRate: number;
+  };
+  stakeWeightedNodeVersions: Array<{
+    index: number;
+    version: string;
+    value: number;
+  }>;
+  stakingYieldAdjusted: number;
+  avgTPS: number;
+  totalTransactionCount: number;
+  nrValidators: number;
+  nrNonValidators: number;
+  superminority: {
+    stake: number;
+    nr: number;
+  };
+  dailyRewards: number;
 }
 
 export interface RecentBlock {
