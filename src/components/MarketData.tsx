@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, DollarSign, BarChart2, Coins, Wallet, RefreshCw } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Coins, Wallet, RefreshCw } from 'lucide-react';
 import { MarketData as MarketDataType, ApiResponse } from '@/lib/api/types';
 import { getMarketData } from '@/lib/api/solana';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';

@@ -62,29 +62,29 @@ async function fetchWithCache<T>(
   let retries = 0;
   
   while (retries < MAX_RETRIES) {
-    try {
-      // Check rate limit
-      if (!checkRateLimit(endpoint)) {
-        throw new SolanaApiError(
-          'RATE_LIMIT_EXCEEDED',
-          'Rate limit exceeded. Please try again later.'
-        );
-      }
+  try {
+    // Check rate limit
+    if (!checkRateLimit(endpoint)) {
+      throw new SolanaApiError(
+        'RATE_LIMIT_EXCEEDED',
+        'Rate limit exceeded. Please try again later.'
+      );
+    }
 
-      // Check cache first
-      const cachedData = await getCachedData<ApiResponse<T>>(cacheKey);
-      if (cachedData) {
-        return cachedData;
-      }
+    // Check cache first
+    const cachedData = await getCachedData<ApiResponse<T>>(cacheKey);
+    if (cachedData) {
+      return cachedData;
+    }
 
-      // Use proxy for all external API calls
-      const response = await fetch(`/api/proxy?endpoint=${endpoint}`, {
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        cache: 'no-store'
-      });
+    // Use proxy for all external API calls
+    const response = await fetch(`/api/proxy?endpoint=${endpoint}`, {
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      cache: 'no-store'
+    });
       
       if (response.status === 429) {
         // Rate limit hit, wait and retry
@@ -92,27 +92,27 @@ async function fetchWithCache<T>(
         retries++;
         continue;
       }
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new SolanaApiError(
-          'API_ERROR',
-          `API error: ${response.status} ${response.statusText}`,
-          errorData
-        );
-      }
-      
-      const data = await response.json();
-      const apiResponse: ApiResponse<T> = {
-        data,
-        timestamp: Date.now(),
-        success: true
-      };
-      
-      // Cache the response
-      await setCachedData(cacheKey, apiResponse, ttl);
-      return apiResponse;
-    } catch (error) {
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new SolanaApiError(
+        'API_ERROR',
+        `API error: ${response.status} ${response.statusText}`,
+        errorData
+      );
+    }
+    
+    const data = await response.json();
+    const apiResponse: ApiResponse<T> = {
+      data,
+      timestamp: Date.now(),
+      success: true
+    };
+    
+    // Cache the response
+    await setCachedData(cacheKey, apiResponse, ttl);
+    return apiResponse;
+  } catch (error) {
       if (retries < MAX_RETRIES - 1) {
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * Math.pow(2, retries)));
         retries++;
