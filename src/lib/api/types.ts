@@ -1,0 +1,202 @@
+// API Response Types
+export interface ApiResponse<T> {
+  data: T;
+  timestamp: number;
+  success: boolean;
+}
+
+// Network Status Types
+export interface NetworkStatus {
+  lastSyncedSlot: number;
+  lastNetworkSlot: number;
+  networkLag: number;
+  laggingBehind: boolean;
+  epochProgress: number;
+  currentEpoch: number;
+  slotsPerEpoch: number;
+}
+
+// Supply Breakdown Types
+export interface SupplyBreakdown {
+  supply: {
+    circulating: number;
+    nonCirculating: number;
+    total: number;
+  };
+  stake: {
+    effective: number;
+    activating: number;
+    deactivating: number;
+  };
+}
+
+// Error Types
+export interface ApiError {
+  code: string;
+  message: string;
+  details?: unknown;
+}
+
+// Cache Types
+export interface CacheConfig {
+  ttl: number;
+  key: string;
+}
+
+// Rate Limit Types
+export interface RateLimitConfig {
+  requests: number;
+  window: number;
+}
+
+// TPS Types
+export interface TPSData {
+  voteTransactionsPerSecond: number;
+  userTransactionsPerSecond: number;
+  totalTransactionsPerSecond: number;
+}
+
+// Market Data Types
+export interface MarketData {
+  timestamp: number;
+  price: number;
+  percentChange1h: number;
+  percentChange24h: number;
+  volume24h: number;
+  marketCap: number;
+  fullyDilutedMarketCap: number;
+  history: Array<{
+    timestamp: number;
+    price: number;
+    volume24h: number;
+  }>;
+}
+
+// Validator Types
+export interface Validator {
+  votePubkey: string;
+  name?: string;
+  version?: string;
+  activatedStake?: number;
+  commission?: number;
+  skipRate?: number;
+  lastVote?: number;
+  voteDistance?: number;
+}
+
+// General Info Types
+export interface GeneralInfo {
+  activatedStake: number;
+  avgBlockTime: number;
+  circulatingSupply: number;
+  dailyPriceChange: number;
+  dailyRewards: number;
+  epoch: number;
+  epochProgress: number;
+  inflationRate: number;
+  lastBlockTime: number;
+  lastPrice: number;
+  marketCap: number;
+  nonCirculatingSupply: number;
+  slot: number;
+  stakingYield: number;
+  stakingYieldAdjusted: number;
+  totalDelegatedStake: number;
+  totalSupply: number;
+  totalValidators: number;
+  volume24h: number;
+}
+
+export interface RecentBlock {
+  slot: string;
+  blockTime: string;
+  voteTransactions: number;
+  userTransactions: number;
+  fees: string;
+  votePubkey: string;
+  name: string | null;
+  iconUrl: string | null;
+}
+
+export interface RecentBlocksResponse {
+  blocks: RecentBlock[];
+  pagination: {
+    total: number;
+    offset: number;
+    limit: number;
+  };
+}
+
+// Top Validator Types
+export interface TopValidator {
+  activatedStake: number;
+  commission: number;
+  votePubkey: string;
+  delegatorCount: number;
+  ll: [number, number];
+  moniker: string;
+  version: string;
+  lastVote: number;
+  pictureURL: string;
+}
+
+// Recent Transaction Types
+export interface TransactionAccount {
+  isSigner: boolean;
+  isWritable: boolean;
+  isLUT: boolean;
+  account: {
+    address: string;
+    name?: string;
+    pubkey?: string;
+    ticker?: string;
+    cmcid?: string | null;
+    logo?: string;
+    meta?: {
+      mintAuthority?: string;
+      freezeAuthority?: string;
+    };
+    decimals?: number;
+  };
+}
+
+export interface TransactionInstruction {
+  parsed?: {
+    [key: string]: any;
+  };
+  raw?: {
+    data: string;
+    accounts: number[];
+    stackHeight: number | null;
+    programIdIndex: number;
+  };
+  programId: {
+    address: string;
+    name?: string;
+    decimals?: number;
+  };
+  innerInstructions?: TransactionInstruction[];
+}
+
+export interface Transaction {
+  transactionHash: string;
+  blockNumber: number;
+  index: number;
+  accounts: TransactionAccount[];
+  header: {
+    numRequiredSignatures: number;
+    numReadonlySignedAccounts: number;
+    numReadonlyUnsignedAccounts: number;
+  };
+  instructions: TransactionInstruction[];
+}
+
+export interface RecentTransactionsResponse {
+  transactions: Transaction[];
+  pagination: {
+    total: number;
+    offset: number;
+    limit: number;
+  };
+}
+

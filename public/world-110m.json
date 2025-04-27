@@ -1,0 +1,44 @@
+{
+  "type": "Topology",
+  "objects": {
+    "countries": {
+      "type": "GeometryCollection",
+      "geometries": [
+        {
+          "type": "Polygon",
+          "arcs": [[0]],
+          "properties": {
+            "name": "United States"
+          }
+        },
+        {
+          "type": "Polygon",
+          "arcs": [[1]],
+          "properties": {
+            "name": "United Kingdom"
+          }
+        },
+        {
+          "type": "Polygon",
+          "arcs": [[2]],
+          "properties": {
+            "name": "Japan"
+          }
+        },
+        {
+          "type": "Polygon",
+          "arcs": [[3]],
+          "properties": {
+            "name": "Germany"
+          }
+        }
+      ]
+    }
+  },
+  "arcs": [
+    [[-74.0060, 40.7128], [-122.4194, 37.7749], [-74.0060, 40.7128]],
+    [[-0.1278, 51.5074], [13.4050, 52.5200], [-0.1278, 51.5074]],
+    [[139.6503, 35.6762], [139.6503, 35.6762], [139.6503, 35.6762]],
+    [[13.4050, 52.5200], [13.4050, 52.5200], [13.4050, 52.5200]]
+  ]
+} 

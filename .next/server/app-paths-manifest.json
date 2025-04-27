@@ -1,0 +1,12 @@
+{
+  "/api/recent-transactions/route": "app/api/recent-transactions/route.js",
+  "/api/proxy/route": "app/api/proxy/route.js",
+  "/api/network-status/route": "app/api/network-status/route.js",
+  "/api/recent-blocks/route": "app/api/recent-blocks/route.js",
+  "/api/tps/route": "app/api/tps/route.js",
+  "/api/general-info/route": "app/api/general-info/route.js",
+  "/api/supply-breakdown/route": "app/api/supply-breakdown/route.js",
+  "/api/validators/route": "app/api/validators/route.js",
+  "/api/market-data/route": "app/api/market-data/route.js",
+  "/validators/page": "app/validators/page.js"
+}
