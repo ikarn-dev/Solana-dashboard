@@ -1,5 +1,7 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { motion, useSpring, useTransform } from 'framer-motion';
+"use client";
+
+import { useEffect, useState, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { Activity } from 'lucide-react';
 import { NetworkStatus as NetworkStatusType, ApiResponse } from '@/lib/api/types';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';

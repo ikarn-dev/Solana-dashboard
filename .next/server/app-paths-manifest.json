@@ -1,15 +1,15 @@
 {
+  "/api/recent-transactions/route": "app/api/recent-transactions/route.js",
   "/api/proxy/route": "app/api/proxy/route.js",
+  "/api/recent-blocks/route": "app/api/recent-blocks/route.js",
   "/page": "app/page.js",
+  "/api/market-data/route": "app/api/market-data/route.js",
+  "/api/general-info/route": "app/api/general-info/route.js",
+  "/api/supply-breakdown/route": "app/api/supply-breakdown/route.js",
+  "/api/tps/route": "app/api/tps/route.js",
   "/api/network-status/route": "app/api/network-status/route.js",
   "/validators/page": "app/validators/page.js",
   "/blocks/page": "app/blocks/page.js",
   "/api/block-stats/route": "app/api/block-stats/route.js",
-  "/api/recent-blocks/route": "app/api/recent-blocks/route.js",
-  "/transactions/page": "app/transactions/page.js",
-  "/api/recent-transactions/route": "app/api/recent-transactions/route.js",
-  "/api/market-data/route": "app/api/market-data/route.js",
-  "/api/tps/route": "app/api/tps/route.js",
-  "/api/general-info/route": "app/api/general-info/route.js",
-  "/api/supply-breakdown/route": "app/api/supply-breakdown/route.js"
+  "/transactions/page": "app/transactions/page.js"
 }

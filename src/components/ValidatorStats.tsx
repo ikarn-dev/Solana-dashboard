@@ -1,4 +1,5 @@
-import { motion } from 'framer-motion';
+"use client";
+
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 interface ValidatorStatsProps {

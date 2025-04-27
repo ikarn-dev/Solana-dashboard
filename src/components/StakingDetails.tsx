@@ -1,12 +1,11 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Coins, TrendingUp, Award } from 'lucide-react';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { SupplyBreakdown, GeneralInfo } from '@/lib/api/types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { formatLargeNumber } from '@/lib/utils';
 
 // Helper function to format lamports to SOL in millions
 const formatToMillions = (lamports: number): string => {
@@ -192,186 +191,177 @@ export function StakingDetails() {
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-6">
-            <div>
-              <div className="flex items-center">
-                <small className="text-gray-500 mr-2">Total Supply</small>
-              </div>
-              <div className="text-2xl font-mono">
-                {formatLargeNumber(supplyData.supply.total)} SOL
-              </div>
-            </div>
-            <div>
-              <div className="flex items-center">
-                <small className="text-gray-500 mr-2">Circulating</small>
-              </div>
-              <div className="text-2xl font-mono">
-                {formatLargeNumber(supplyData.supply.circulating)} SOL
-              </div>
-            </div>
-            <div>
-              <div className="flex items-center">
-                <small className="text-gray-500 mr-2">Non-Circulating</small>
-              </div>
-              <div className="text-2xl font-mono">
-                {formatLargeNumber(supplyData.supply.nonCirculating)} SOL
-              </div>
-            </div>
-          </div>
-
           {/* Supply Information */}
-          <div className="flex flex-col">
+          <div className="glass-card p-4 rounded-lg bg-lime-50/50 border border-lime-100">
             <h3 className="text-lg font-semibold text-lime-600 mb-4">Supply Information</h3>
-            <div className="glass-card p-4 rounded-lg bg-lime-50/50 border border-lime-100">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <small className="text-gray-500 mr-2">Total Supply</small>
-                  </div>
-                  <div className="text-2xl font-mono">
-                    {formatToMillions(supplyData.supply.total)}
-                  </div>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <small className="text-gray-500 mr-2">Total Supply</small>
                 </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <small className="text-gray-500 mr-2">Circulating</small>
-                  </div>
-                  <div className="text-2xl font-mono">
-                    {formatToMillions(supplyData.supply.circulating)}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <small className="text-gray-500 mr-2">Non-Circulating</small>
-                  </div>
-                  <div className="text-2xl font-mono">
-                    {formatToMillions(supplyData.supply.nonCirculating)}
-                  </div>
+                <div className="text-2xl font-mono">
+                  {formatToMillions(supplyData.supply.total)}
                 </div>
               </div>
 
-              {/* Supply Distribution Pie Chart */}
-              <div className="h-64 mt-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={supplyChartData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      paddingAngle={5}
-                      dataKey="value"
-                      startAngle={90}
-                      endAngle={-270}
-                    >
-                      {supplyChartData.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill={entry.color}
-                          strokeWidth={0}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<CustomTooltip />} />
-                  </PieChart>
-                </ResponsiveContainer>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <small className="text-gray-500 mr-2">Circulating</small>
+                </div>
+                <div className="text-2xl font-mono">
+                  {formatToMillions(supplyData.supply.circulating)}
+                </div>
               </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <small className="text-gray-500 mr-2">Non-Circulating</small>
+                </div>
+                <div className="text-2xl font-mono">
+                  {formatToMillions(supplyData.supply.nonCirculating)}
+                </div>
+              </div>
+            </div>
+
+            {/* Supply Distribution Pie Chart */}
+            <div className="h-64 mt-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={supplyChartData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    paddingAngle={5}
+                    dataKey="value"
+                    startAngle={90}
+                    endAngle={-270}
+                  >
+                    {supplyChartData.map((entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={entry.color}
+                        strokeWidth={0}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            {/* Supply Chart Legend */}
+            <div className="flex justify-center gap-4 mt-4">
+              {supplyChartData.map((entry, index) => (
+                <div key={`legend-${index}`} className="flex items-center gap-2">
+                  <div 
+                    className="w-3 h-3 rounded-full" 
+                    style={{ backgroundColor: entry.color }}
+                  />
+                  <span className="text-sm text-gray-600">{entry.name}</span>
+                </div>
+              ))}
             </div>
           </div>
 
           {/* Staking Information */}
-          <div className="flex flex-col">
+          <div className="glass-card p-4 rounded-lg bg-lime-50/50 border border-lime-100">
             <h3 className="text-lg font-semibold text-lime-600 mb-4">Staking Status</h3>
-            <div className="glass-card p-4 rounded-lg bg-lime-50/50 border border-lime-100">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <small className="text-gray-500 mr-2">Activating</small>
-                    </div>
-                    <div className="text-2xl font-mono">
-                      {formatToMillions(supplyData.stake.activating)}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <small className="text-gray-500 mr-2">Deactivating</small>
-                    </div>
-                    <div className="text-2xl font-mono">
-                      {formatToMillions(supplyData.stake.deactivating)}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <small className="text-gray-500 mr-2">Effective Stake</small>
-                    </div>
-                    <div className="text-2xl font-mono">
-                      {formatToMillions(supplyData.stake.effective)}
-                    </div>
-                  </div>
-
-                  {/* APY Information */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <small className="text-gray-500 mr-2">Current APY</small>
-                      <div className="flex items-center">
-                        <TrendingUp className="w-3 h-3 text-gray-400" />
-                      </div>
-                    </div>
-                    <div className="text-2xl font-mono text-lime-600">
-                      {(generalInfo.stakingYield || 0).toFixed(2)}%
-                    </div>
-                  </div>
-
-                  {/* Rewards Information */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <small className="text-gray-500 mr-2">Daily Rewards</small>
-                      <div className="flex items-center">
-                        <Award className="w-3 h-3 text-gray-400" />
-                      </div>
-                    </div>
-                    <div className="text-2xl font-mono text-lime-600">
-                      {formatToSol(generalInfo.dailyRewards || 0)} SOL
-                    </div>
-                  </div>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <small className="text-gray-500 mr-2">Activating</small>
                 </div>
-
-                {/* Staking Status Pie Chart */}
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={stakeChartData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        paddingAngle={5}
-                        dataKey="value"
-                        startAngle={90}
-                        endAngle={-270}
-                      >
-                        {stakeChartData.map((entry, index) => (
-                          <Cell 
-                            key={`cell-${index}`} 
-                            fill={entry.color}
-                            strokeWidth={0}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<CustomTooltip />} />
-                    </PieChart>
-                  </ResponsiveContainer>
+                <div className="text-2xl font-mono">
+                  {formatToMillions(supplyData.stake.activating)}
                 </div>
               </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <small className="text-gray-500 mr-2">Deactivating</small>
+                </div>
+                <div className="text-2xl font-mono">
+                  {formatToMillions(supplyData.stake.deactivating)}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <small className="text-gray-500 mr-2">Effective Stake</small>
+                </div>
+                <div className="text-2xl font-mono">
+                  {formatToMillions(supplyData.stake.effective)}
+                </div>
+              </div>
+
+              {/* APY Information */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <small className="text-gray-500 mr-2">Current APY</small>
+                  <div className="flex items-center">
+                    <TrendingUp className="w-3 h-3 text-gray-400" />
+                  </div>
+                </div>
+                <div className="text-2xl font-mono text-lime-600">
+                  {(generalInfo.stakingYield || 0).toFixed(2)}%
+                </div>
+              </div>
+
+              {/* Rewards Information */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <small className="text-gray-500 mr-2">Daily Rewards</small>
+                  <div className="flex items-center">
+                    <Award className="w-3 h-3 text-gray-400" />
+                  </div>
+                </div>
+                <div className="text-2xl font-mono text-lime-600">
+                  {formatToSol(generalInfo.dailyRewards || 0)} SOL
+                </div>
+              </div>
+            </div>
+
+            {/* Staking Status Pie Chart */}
+            <div className="h-64 mt-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={stakeChartData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    paddingAngle={5}
+                    dataKey="value"
+                    startAngle={90}
+                    endAngle={-270}
+                  >
+                    {stakeChartData.map((entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={entry.color}
+                        strokeWidth={0}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            {/* Staking Chart Legend */}
+            <div className="flex justify-center gap-4 mt-4">
+              {stakeChartData.map((entry, index) => (
+                <div key={`legend-${index}`} className="flex items-center gap-2">
+                  <div 
+                    className="w-3 h-3 rounded-full" 
+                    style={{ backgroundColor: entry.color }}
+                  />
+                  <span className="text-sm text-gray-600">{entry.name}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>

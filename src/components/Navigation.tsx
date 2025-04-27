@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { motion } from 'framer-motion';
 
 const Navigation = () => {
   const pathname = usePathname();
@@ -19,7 +18,11 @@ const Navigation = () => {
         <div className="flex justify-between h-16">
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
-              <Link href="/" className="text-2xl font-semibold text-lime-600">
+              <Link 
+                href="/" 
+                className="text-2xl font-semibold text-lime-600"
+                prefetch={true}
+              >
                 Solana Dashboard
               </Link>
             </div>
@@ -28,7 +31,8 @@ const Navigation = () => {
                 <Link
                   key={item.path}
                   href={item.path}
-                  className={`inline-flex items-center px-1 pt-1 text-sm font-medium ${
+                  prefetch={true}
+                  className={`inline-flex items-center px-1 pt-1 text-sm font-medium transition-colors duration-200 ${
                     pathname === item.path
                       ? 'text-lime-600 border-b-2 border-lime-500'
                       : 'text-gray-500 hover:text-lime-600 hover:border-lime-300'

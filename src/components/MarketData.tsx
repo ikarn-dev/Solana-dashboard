@@ -1,12 +1,12 @@
+"use client";
+
 import { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { TrendingUp, TrendingDown, DollarSign, Coins, Wallet, RefreshCw } from 'lucide-react';
-import { MarketData as MarketDataType, ApiResponse } from '@/lib/api/types';
+import { TrendingUp, TrendingDown, DollarSign, RefreshCw } from 'lucide-react';
+import { MarketData as MarketDataType } from '@/lib/api/types';
 import { getMarketData } from '@/lib/api/solana';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { 
-  LineChart, 
-  Line, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
