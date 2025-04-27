@@ -1,8 +1,8 @@
 import { NetworkStatus, SupplyBreakdown, ApiResponse, TPSData, MarketData, RecentBlocksResponse, RecentTransactionsResponse, Validator, GeneralInfo } from './types';
-import { getCachedData, setCachedData, CACHE_TTL } from '../redis';
+import { getCachedData, setCachedData, CACHE_TTL } from '../cache';
 
 // Base URL for Solana Beach API
-export const SOLANA_BEACH_API = process.env.NEXT_PUBLIC_SOLANA_BEACH_API_URL || 'https://public-api.solanabeach.io';
+export const SOLANA_BEACH_API = process.env.NEXT_PUBLIC_SOLANA_API_URL || 'https://public-api.solanabeach.io';
 const API_KEY = process.env.SOLANA_BEACH_API_KEY;
 
 // Rate limiting configuration
