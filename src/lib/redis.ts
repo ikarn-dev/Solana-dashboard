@@ -10,27 +10,27 @@ let redis: Redis | null = null;
 const initializeRedis = async () => {
   if (!redis) {
     try {
-      // Use Redis URL and password from environment variables
       const redisUrl = process.env.REDIS_URL;
-      const redisPassword = process.env.REDIS_PASSWORD;
+      const redisToken = process.env.REDIS_PASSWORD;
       
-      if (redisUrl && redisPassword) {
-        console.info('Connecting to Redis');
-        redis = new Redis({
-          url: redisUrl,
-          password: redisPassword,
-        });
-        
-        // Test the connection
-        await redis.ping();
-        console.info('Successfully connected to Redis');
-      } else {
+      if (!redisUrl || !redisToken) {
         console.info('Redis credentials not found, using in-memory cache');
-        redis = null;
+        return null;
       }
+
+      console.info('Connecting to Redis');
+      redis = new Redis({
+        url: redisUrl,
+        token: redisToken,
+      });
+      
+      // Test the connection
+      await redis.ping();
+      console.info('Successfully connected to Redis');
+      return redis;
     } catch (error) {
       console.warn('Redis connection failed, falling back to in-memory cache:', error);
-      redis = null;
+      return null;
     }
   }
   return redis;
@@ -49,7 +49,7 @@ export async function getCachedData<T>(key: string): Promise<T | null> {
     const redisInstance = await initializeRedis();
     if (redisInstance) {
       const data = await redisInstance.get<T>(key);
-      return data || null;
+      return data;
     }
     
     // Fallback to in-memory cache
