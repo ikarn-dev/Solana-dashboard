@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
-import { SOLANA_BEACH_API } from '@/lib/api/solana';
 import { getCachedData, setCachedData, CACHE_TTL } from '@/lib/cache';
 
+const SOLANA_BEACH_API = process.env.NEXT_PUBLIC_SOLANA_BEACH_API_URL || 'https://public-api.solanabeach.io';
 const API_KEY = process.env.SOLANA_BEACH_API_KEY;
-const API_URL = process.env.NEXT_PUBLIC_SOLANA_API_URL || 'https://public-api.solanabeach.io';
 
 // Simple in-memory cache for validator data
 const validatorCache = new Map<string, { data: any; timestamp: number }>();
@@ -68,13 +67,17 @@ export async function GET(request: Request) {
       );
     }
 
+    // Get the URL and search params
     const { searchParams } = new URL(request.url);
     const endpoint = searchParams.get('endpoint');
     const limit = searchParams.get('limit');
     const offset = searchParams.get('offset');
     
     if (!endpoint) {
-      return NextResponse.json({ error: 'Endpoint parameter is required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Endpoint is required' },
+        { status: 400 }
+      );
     }
 
     // Check cache for all endpoints
@@ -84,17 +87,19 @@ export async function GET(request: Request) {
       return NextResponse.json(cachedData);
     }
 
-    const url = new URL(`${API_URL}${endpoint}`);
+    const url = new URL(`${SOLANA_BEACH_API}${endpoint}`);
     if (limit) url.searchParams.append('limit', limit);
     if (offset) url.searchParams.append('offset', offset);
 
     console.log(`Fetching from: ${url.toString()}`);
 
-    const response = await fetchWithRetry(url.toString(), {
+    const response = await fetch(url.toString(), {
       headers: {
         'Accept': 'application/json',
-        'Authorization': `Bearer ${API_KEY}`
-      }
+        'Authorization': `Bearer ${API_KEY}`,
+        'Origin': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+      },
+      cache: 'no-store'
     });
 
     if (!response.ok) {
@@ -105,7 +110,7 @@ export async function GET(request: Request) {
         error: errorData
       });
       return NextResponse.json(
-        { error: errorData.message || 'Failed to fetch data from Solana Beach API' },
+        { error: `API error: ${response.status} ${response.statusText}`, details: errorData },
         { status: response.status }
       );
     }
@@ -117,9 +122,9 @@ export async function GET(request: Request) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Proxy error:', error);
+    console.error('Error in proxy:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to fetch data' },
       { status: 500 }
     );
   }

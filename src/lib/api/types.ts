@@ -75,13 +75,17 @@ export interface MarketData {
 // Validator Types
 export interface Validator {
   votePubkey: string;
-  name?: string;
-  version?: string;
-  activatedStake?: number;
-  commission?: number;
-  skipRate?: number;
-  lastVote?: number;
-  voteDistance?: number;
+  name: string;
+  version: string;
+  activatedStake: number;
+  commission: number;
+  skipRate: number;
+  lastVote: number;
+  voteDistance: number;
+  ll: [number, number];
+  pictureURL: string;
+  rank?: number;
+  website?: string;
 }
 
 // General Info Types

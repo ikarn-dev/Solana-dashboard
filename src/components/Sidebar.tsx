@@ -49,16 +49,16 @@ const Sidebar: FC = () => {
     <>
       {/* Mobile menu button */}
       <motion.button
-        onClick={() => setIsOpen(!isOpen)}
+          onClick={() => setIsOpen(!isOpen)}
         className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-md text-gray-700 hover:text-lime-600 hover:bg-lime-50 transition-all duration-300"
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-      >
-        {isOpen ? (
-          <XMarkIcon className="h-6 w-6" />
-        ) : (
-          <Bars3Icon className="h-6 w-6" />
-        )}
+        >
+          {isOpen ? (
+            <XMarkIcon className="h-6 w-6" />
+          ) : (
+            <Bars3Icon className="h-6 w-6" />
+          )}
       </motion.button>
 
       {/* Overlay */}
@@ -95,17 +95,17 @@ const Sidebar: FC = () => {
                   onClick={() => setIsOpen(false)}
                 >
                   <motion.div
-                    className={`sidebar-item flex items-center px-4 py-2 text-sm font-medium rounded-md ${
-                      isActive
-                        ? 'bg-lime-50 text-lime-600'
-                        : 'text-gray-700 hover:bg-lime-50 hover:text-lime-600'
-                    }`}
+                  className={`sidebar-item flex items-center px-4 py-2 text-sm font-medium rounded-md ${
+                    isActive
+                      ? 'bg-lime-50 text-lime-600'
+                      : 'text-gray-700 hover:bg-lime-50 hover:text-lime-600'
+                  }`}
                     whileHover={{ x: 5 }}
                     whileTap={{ scale: 0.98 }}
                     transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                  >
-                    <item.icon className="mr-3 h-5 w-5" />
-                    {item.name}
+                >
+                  <item.icon className="mr-3 h-5 w-5" />
+                  {item.name}
                     {isActive && (
                       <motion.div
                         className="absolute right-0 w-1 h-6 bg-lime-500 rounded-l"

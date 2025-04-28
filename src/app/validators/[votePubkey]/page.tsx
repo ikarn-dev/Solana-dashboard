@@ -2,15 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { getTopValidators } from '@/lib/api/solana';
-import { TopValidator } from '@/lib/api/types';
+import { getValidatorDetails } from '@/lib/api/solana';
+import { Validator } from '@/lib/api/types';
 import { getLocationFromCoordinates, LocationInfo } from '@/lib/utils/geocoding';
 import Reloading from '@/components/Reloading';
 
 export default function ValidatorProfilePage() {
   const { votePubkey } = useParams();
   const [isLoading, setIsLoading] = useState(true);
-  const [validator, setValidator] = useState<TopValidator | null>(null);
+  const [validator, setValidator] = useState<Validator | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [locationInfo, setLocationInfo] = useState<LocationInfo | null>(null);
 
@@ -18,17 +18,11 @@ export default function ValidatorProfilePage() {
     const fetchValidatorDetails = async () => {
       try {
         setIsLoading(true);
-        const response = await getTopValidators(100);
-        const validatorData = response.data.find(v => v.votePubkey === votePubkey);
-        
-        if (!validatorData) {
-          throw new Error('Validator not found');
-        }
-        
+        const validatorData = await getValidatorDetails(votePubkey as string);
         setValidator(validatorData);
 
         // Fetch location information if coordinates are available
-        if (validatorData.ll[0] !== 0 && validatorData.ll[1] !== 0) {
+        if (validatorData.ll && validatorData.ll[0] !== 0 && validatorData.ll[1] !== 0) {
           const location = await getLocationFromCoordinates(validatorData.ll);
           setLocationInfo(location);
         }
@@ -85,13 +79,13 @@ export default function ValidatorProfilePage() {
           {validator.pictureURL ? (
             <img 
               src={validator.pictureURL} 
-              alt={validator.moniker}
+              alt={validator.name}
               className="w-32 h-32 rounded-full object-cover mb-6 shadow-lg border-4 border-lime-200"
             />
           ) : (
             <div className="w-32 h-32 rounded-full bg-lime-100 flex items-center justify-center mb-6 shadow-lg border-4 border-lime-200">
               <span className="text-5xl font-bold text-lime-600">
-                {validator.moniker.charAt(0).toUpperCase()}
+                {validator.name?.charAt(0).toUpperCase() || 'V'}
               </span>
             </div>
           )}
@@ -101,7 +95,7 @@ export default function ValidatorProfilePage() {
             rel="noopener noreferrer"
             className="text-4xl font-bold text-lime-600 text-center hover:text-lime-700 transition-colors group flex items-center gap-2"
           >
-            {validator.moniker}
+            {validator.name || 'Unnamed Validator'}
             <svg className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>
@@ -131,7 +125,7 @@ export default function ValidatorProfilePage() {
               <div className="flex justify-between items-center border-b border-gray-100 pb-3">
                 <span className="text-gray-500">Version</span>
                 <span className="font-medium bg-lime-50 px-3 py-1 rounded-full text-lime-700">
-                  {validator.version}
+                  {validator.version || 'Unknown'}
                 </span>
               </div>
               <div className="flex justify-between items-center border-b border-gray-100 pb-3">
@@ -143,19 +137,23 @@ export default function ValidatorProfilePage() {
               <div className="flex justify-between items-center border-b border-gray-100 pb-3">
                 <span className="text-gray-500">Activated Stake</span>
                 <span className="font-medium bg-lime-50 px-3 py-1 rounded-full text-lime-700">
-                  {validator.activatedStake > 0 ? `${(validator.activatedStake / 1e9).toFixed(2)} SOL` : 'Unknown'}
+                  {typeof validator.activatedStake === 'number' && validator.activatedStake > 0 
+                    ? `${(validator.activatedStake / 1e9).toFixed(2)} SOL` 
+                    : 'Unknown'}
                 </span>
               </div>
               <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-                <span className="text-gray-500">Delegators</span>
+                <span className="text-gray-500">Skip Rate</span>
                 <span className="font-medium bg-lime-50 px-3 py-1 rounded-full text-lime-700">
-                  {validator.delegatorCount > 0 ? validator.delegatorCount : 'Unknown'}
+                  {typeof validator.skipRate === 'number' ? `${validator.skipRate}%` : 'Unknown'}
                 </span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-500">Last Vote</span>
                 <span className="font-medium bg-lime-50 px-3 py-1 rounded-full text-lime-700">
-                  {validator.lastVote > 0 ? new Date(validator.lastVote * 1000).toLocaleString() : 'Unknown'}
+                  {typeof validator.lastVote === 'number' && validator.lastVote > 0 
+                    ? new Date(validator.lastVote * 1000).toLocaleString() 
+                    : 'Unknown'}
                 </span>
               </div>
             </div>
@@ -170,7 +168,7 @@ export default function ValidatorProfilePage() {
               <div className="flex justify-between items-center border-b border-gray-100 pb-3">
                 <span className="text-gray-500">Coordinates</span>
                 <span className="font-medium bg-lime-50 px-3 py-1 rounded-full text-lime-700">
-                  {validator.ll[0] !== 0 && validator.ll[1] !== 0 
+                  {validator.ll && validator.ll[0] !== 0 && validator.ll[1] !== 0 
                     ? `${validator.ll[0]}, ${validator.ll[1]}`
                     : 'Unknown'}
                 </span>
