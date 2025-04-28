@@ -598,10 +598,70 @@ export async function getValidatorDetails(votePubkey: string): Promise<Validator
     const validator = validators.find((v: any) => v.votePubkey === votePubkey);
     
     if (!validator) {
-      throw new SolanaApiError(
-        'NOT_FOUND',
-        `Validator not found with votePubkey: ${votePubkey}`
-      );
+      // If not found in top 200, make a direct API call
+      const directResponse = await fetch(`${SOLANA_BEACH_API}/v1/validators/top?limit=1&votePubkey=${votePubkey}`, {
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        cache: 'no-store'
+      });
+
+      if (!directResponse.ok) {
+        // Return a default validator object if not found
+        return {
+          votePubkey: votePubkey,
+          name: 'Unknown Validator',
+          version: 'Unknown',
+          activatedStake: 0,
+          commission: 0,
+          skipRate: 0,
+          lastVote: Math.floor(Date.now() / 1000),
+          voteDistance: 0,
+          ll: [0, 0],
+          pictureURL: '',
+          rank: undefined,
+          website: undefined
+        };
+      }
+
+      const directData = await directResponse.json();
+      const directValidator = Array.isArray(directData) ? directData[0] : directData;
+
+      if (!directValidator) {
+        // Return a default validator object if not found
+        return {
+          votePubkey: votePubkey,
+          name: 'Unknown Validator',
+          version: 'Unknown',
+          activatedStake: 0,
+          commission: 0,
+          skipRate: 0,
+          lastVote: Math.floor(Date.now() / 1000),
+          voteDistance: 0,
+          ll: [0, 0],
+          pictureURL: '',
+          rank: undefined,
+          website: undefined
+        };
+      }
+
+      // Transform the direct API response to Validator type
+      return {
+        votePubkey: directValidator.votePubkey,
+        name: directValidator.moniker || directValidator.name || 'Unnamed Validator',
+        version: directValidator.version || 'Unknown',
+        activatedStake: typeof directValidator.activatedStake === 'number' ? directValidator.activatedStake : 0,
+        commission: typeof directValidator.commission === 'number' ? directValidator.commission : 0,
+        skipRate: typeof directValidator.skipRate === 'number' ? directValidator.skipRate : 0,
+        lastVote: typeof directValidator.lastVote === 'number' ? directValidator.lastVote : Math.floor(Date.now() / 1000),
+        voteDistance: typeof directValidator.voteDistance === 'number' ? directValidator.voteDistance : 0,
+        ll: directValidator.ll || [0, 0],
+        pictureURL: directValidator.pictureURL || '',
+        rank: undefined,
+        website: directValidator.website || undefined
+      };
     }
 
     // Transform the data to match Validator type
@@ -617,7 +677,7 @@ export async function getValidatorDetails(votePubkey: string): Promise<Validator
       ll: validator.ll || [0, 0],
       pictureURL: validator.pictureURL || '',
       rank: validators.indexOf(validator) + 1,
-      website: validator.website || ''
+      website: validator.website || undefined
     };
 
     return transformedValidator;
