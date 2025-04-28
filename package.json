@@ -54,7 +54,10 @@
     "@types/react-tooltip": "^5.0.0",
     "@types/react-virtualized": "^9.21.21",
     "@types/react-window": "^1.8.5",
-    "@types/react-spring": "^9.7.3",
     "@types/date-fns": "^2.6.0"
+  },
+  "resolutions": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   }
 }
