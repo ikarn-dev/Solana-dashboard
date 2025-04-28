@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, RefreshCw } from 'lucide-react';
-import { TPSData, ApiResponse } from '@/lib/api/types';
+import { TPSData } from '@/lib/api/types';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { getTPS } from '@/lib/api/solana';
 
