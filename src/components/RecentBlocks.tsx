@@ -134,25 +134,34 @@ export function RecentBlocks() {
                 >
                   <td className="py-3">
                     <a 
-                      href={`/block/${block.slot}`}
-                      className="text-lime-600 hover:text-lime-700 font-mono"
+                      href={`https://solscan.io/block/${block.slot}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-lime-600 hover:text-lime-700 font-mono group flex items-center gap-2"
                     >
                       {block.slot}
+                      <svg className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
                     </a>
                   </td>
                   <td className="py-3">
                     <a 
-                      href={`/validator/${block.votePubkey}`}
+                      href={`/validators/${block.votePubkey}`}
                       className="flex items-center space-x-2 text-lime-600 hover:text-lime-700"
                     >
                       {block.iconUrl ? (
                         <img 
                           src={block.iconUrl} 
                           alt={block.name || 'Validator'} 
-                          className="w-4 h-4 rounded-full"
+                          className="w-6 h-6 rounded-full object-cover"
                         />
                       ) : (
-                        <div className="w-4 h-4 rounded-full bg-lime-100"></div>
+                        <div className="w-6 h-6 rounded-full bg-lime-100 flex items-center justify-center">
+                          <span className="text-xs font-bold text-lime-600">
+                            {(block.name || block.votePubkey).charAt(0).toUpperCase()}
+                          </span>
+                        </div>
                       )}
                       <span className="font-mono">
                         {block.name || block.votePubkey.slice(0, 8) + '...' + block.votePubkey.slice(-8)}
@@ -170,6 +179,25 @@ export function RecentBlocks() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold text-lime-600 mb-4">Block Activity (Last 10)</h3>
+          <div className="h-64 bg-lime-50/50 rounded-lg p-4">
+            <div className="h-full flex items-end gap-2">
+              {blocks.map((block) => (
+                <div 
+                  key={block.slot}
+                  className="flex-1 bg-lime-400 hover:bg-lime-500 transition-colors rounded-t"
+                  style={{ 
+                    height: `${((block.voteTransactions + block.userTransactions) / Math.max(...blocks.map(b => b.voteTransactions + b.userTransactions))) * 100}%`,
+                    minHeight: '10px'
+                  }}
+                  title={`${block.voteTransactions + block.userTransactions} transactions`}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </motion.div>
     </ErrorBoundary>

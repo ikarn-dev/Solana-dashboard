@@ -133,7 +133,7 @@ export function TopValidators() {
                 >
                   <td className="py-3">
                     <a 
-                      href={`/validator/${validator.votePubkey}`}
+                      href={`/validators/${validator.votePubkey}`}
                       className="flex items-center space-x-2 text-lime-600 hover:text-lime-700"
                     >
                       {validator.pictureURL ? (

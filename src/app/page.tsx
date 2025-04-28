@@ -10,32 +10,39 @@ import { RecentBlocks } from '@/components/RecentBlocks';
 import { HomeValidators } from '@/components/HomeValidators';
 import { RecentTransactions } from '@/components/RecentTransactions';
 import { motion, AnimatePresence } from 'framer-motion';
+import Reloading from '@/components/Reloading';
 
 export default function Home() {
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Preserve scroll position on reload
   useEffect(() => {
-    const scrollPosition = sessionStorage.getItem('scrollPosition');
-    if (scrollPosition) {
-      window.scrollTo(0, parseInt(scrollPosition));
-    }
-
+    window.scrollTo(0, 0);
+    
     const handleScroll = () => {
-      // Save scroll position
-      sessionStorage.setItem('scrollPosition', window.scrollY.toString());
-      
-      // Show/hide scroll to top button
       setShowScrollTop(window.scrollY > 300);
     };
 
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    
+    // Simulate loading
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 1000);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      clearTimeout(timer);
+    };
   }, []);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  if (isLoading) {
+    return <Reloading />;
+  }
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-lime-50 to-white relative overflow-hidden">

@@ -120,10 +120,15 @@ export function RecentTransactions() {
                 >
                   <td className="py-3">
                     <a 
-                      href={`/transaction/${tx.transactionHash}`}
-                      className="text-lime-600 hover:text-lime-700 font-mono"
+                      href={`https://solscan.io/tx/${tx.transactionHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-lime-600 hover:text-lime-700 font-mono group flex items-center gap-2"
                     >
                       {tx.transactionHash.slice(0, 8)}...{tx.transactionHash.slice(-8)}
+                      <svg className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
                     </a>
                   </td>
                   <td className="py-3 font-mono">{formatExactNumber(tx.blockNumber)}</td>
@@ -136,6 +141,25 @@ export function RecentTransactions() {
               ))}
             </tbody>
           </table>
+        </div>
+
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold text-lime-600 mb-4">Transaction Volume (Last 10)</h3>
+          <div className="h-64 bg-lime-50/50 rounded-lg p-4">
+            <div className="h-full flex items-end gap-2">
+              {transactions.map((tx, index) => (
+                <div 
+                  key={tx.transactionHash}
+                  className="flex-1 bg-lime-400 hover:bg-lime-500 transition-colors rounded-t"
+                  style={{ 
+                    height: `${(tx.instructions.length / Math.max(...transactions.map(t => t.instructions.length))) * 100}%`,
+                    minHeight: '10px'
+                  }}
+                  title={`${tx.instructions.length} instructions`}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </motion.div>
     </ErrorBoundary>

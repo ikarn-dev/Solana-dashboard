@@ -1,4 +1,4 @@
-import { NetworkStatus, SupplyBreakdown, ApiResponse, TPSData, MarketData, RecentBlocksResponse, RecentTransactionsResponse, Validator, GeneralInfo } from './types';
+import { NetworkStatus, SupplyBreakdown, ApiResponse, TPSData, MarketData, RecentBlocksResponse, RecentTransactionsResponse, Validator, GeneralInfo, TopValidator } from './types';
 import { getCachedData, setCachedData, CACHE_TTL } from '../cache';
 
 // Base URL for Solana Beach API
@@ -434,7 +434,7 @@ export async function getRecentTransactions(limit: number = 50, offset: number =
 }
 
 // Get Top Validators
-export async function getTopValidators(limit: number = 100, offset: number = 0): Promise<ApiResponse<Validator[]>> {
+export async function getTopValidators(limit: number = 100, offset: number = 0): Promise<ApiResponse<TopValidator[]>> {
   try {
     if (!API_KEY) {
       throw new SolanaApiError(
@@ -471,8 +471,21 @@ export async function getTopValidators(limit: number = 100, offset: number = 0):
       );
     }
 
+    // Transform the data to match TopValidator type
+    const transformedData = data.map(validator => ({
+      votePubkey: validator.votePubkey,
+      moniker: validator.moniker || validator.name || 'Unnamed Validator',
+      version: validator.version || 'Unknown',
+      commission: validator.commission || 0,
+      activatedStake: validator.activatedStake || 0,
+      delegatorCount: validator.delegatorCount || 0,
+      lastVote: validator.lastVote || Math.floor(Date.now() / 1000),
+      ll: validator.ll || [0, 0],
+      pictureURL: validator.pictureURL || ''
+    }));
+
     return {
-      data,
+      data: transformedData,
       timestamp: Date.now(),
       success: true
     };
@@ -541,4 +554,13 @@ export async function getGeneralInfo(): Promise<ApiResponse<GeneralInfo>> {
       error
     );
   }
+}
+
+export async function getValidatorDetails(votePubkey: string): Promise<Validator> {
+  const response = await fetch(`/api/validators/${votePubkey}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch validator details');
+  }
+  const data = await response.json();
+  return data.data;
 }

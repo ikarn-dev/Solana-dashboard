@@ -238,6 +238,9 @@ export function StakingDetails() {
                       dataKey="value"
                       startAngle={90}
                       endAngle={-270}
+                      animationBegin={0}
+                      animationDuration={1000}
+                      animationEasing="ease-out"
                     >
                       {supplyChartData.map((entry, index) => (
                         <Cell 
@@ -338,6 +341,9 @@ export function StakingDetails() {
                         dataKey="value"
                         startAngle={90}
                         endAngle={-270}
+                        animationBegin={0}
+                        animationDuration={1000}
+                        animationEasing="ease-out"
                       >
                         {stakeChartData.map((entry, index) => (
                           <Cell 

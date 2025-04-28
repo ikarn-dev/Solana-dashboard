@@ -134,17 +134,21 @@ export function HomeValidators() {
                 >
                   <td className="py-3">
                     <a 
-                      href={`/validator/${validator.votePubkey}`}
+                      href={`/validators/${validator.votePubkey}`}
                       className="flex items-center space-x-2 text-lime-600 hover:text-lime-700"
                     >
                       {validator.pictureURL ? (
                         <img 
                           src={validator.pictureURL} 
                           alt={validator.moniker} 
-                          className="w-4 h-4 rounded-full"
+                          className="w-6 h-6 rounded-full object-cover"
                         />
                       ) : (
-                        <div className="w-4 h-4 rounded-full bg-lime-100"></div>
+                        <div className="w-6 h-6 rounded-full bg-lime-100 flex items-center justify-center">
+                          <span className="text-xs font-bold text-lime-600">
+                            {validator.moniker.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
                       )}
                       <span className="font-mono">
                         {validator.moniker || validator.votePubkey.slice(0, 8) + '...' + validator.votePubkey.slice(-8)}
