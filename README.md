@@ -72,7 +72,7 @@ To use the Solana Beach API, you need to obtain an API key from [Solana Beach](h
 
 ## Data Sources
 
-- [Solana Beach Public API](https://public-api.solanabeach.io/)
+- [Solana Beach Public API](https://github.com/solana-beach/api)
 - [Solana Official Documentation](https://docs.solana.com/)
 
 ## Attribution
