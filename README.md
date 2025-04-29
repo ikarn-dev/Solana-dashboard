@@ -5,6 +5,7 @@
 The Solana Staking Dashboard is a web-based application that aggregates and displays real-time data on Solana staking. It provides insights into the health and performance of the Solana blockchain's staking ecosystem, making it easier for users to monitor key metrics and make informed decisions.
 
 ![Dashboard Screenshot]
+
 ![Screenshot 2025-04-29 120746](https://github.com/user-attachments/assets/b8bf01a3-5045-4462-ade8-d3d860cbe47c)
 ![Screenshot 2025-04-29 120731](https://github.com/user-attachments/assets/834dd362-9622-4d9b-9730-f141eb228a6b)
 ![Screenshot 2025-04-29 120715](https://github.com/user-attachments/assets/e753e178-172a-4230-a1a9-1d51b0f6d45e)
@@ -14,6 +15,7 @@ The Solana Staking Dashboard is a web-based application that aggregates and disp
 ![Screenshot 2025-04-29 120606](https://github.com/user-attachments/assets/c8ad729c-fb4c-4a75-9f3e-c043dd3ffe81)
 ![Screenshot 2025-04-29 120546](https://github.com/user-attachments/assets/8f3ce1e8-20a8-4a1d-8f67-bbe6478dc68a)
 ![Screenshot 2025-04-29 120531](https://github.com/user-attachments/assets/16044bb7-afc2-4717-8a28-39a2a133ae13)
+
 
 ## Features
 
