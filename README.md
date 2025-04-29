@@ -24,7 +24,6 @@ The Solana Staking Dashboard is a web-based application that aggregates and disp
 - Network health metrics such as total validators, skip rates, and staking APY.
 - Supply breakdown showing circulating, non-circulating, and total supply.
 - Responsive design for seamless use across devices.
-- Automatic data refresh every 5 minutes with manual refresh options.
 
 ## Setup Instructions
 
