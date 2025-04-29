@@ -598,11 +598,10 @@ export async function getValidatorDetails(votePubkey: string): Promise<Validator
     const validator = validators.find((v: any) => v.votePubkey === votePubkey);
     
     if (!validator) {
-      // If not found in top 200, make a direct API call
-      const directResponse = await fetch(`${SOLANA_BEACH_API}/v1/validators/top?limit=1&votePubkey=${votePubkey}`, {
+      // If not found in top 200, make a direct API call through proxy
+      const directResponse = await fetch(`/api/proxy?endpoint=/v1/validators/top&limit=1&votePubkey=${votePubkey}`, {
         headers: {
           'Accept': 'application/json',
-          'Authorization': `Bearer ${API_KEY}`,
           'Content-Type': 'application/json'
         },
         cache: 'no-store'
