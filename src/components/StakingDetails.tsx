@@ -72,8 +72,22 @@ export function StakingDetails() {
       }
       
       const [supplyResponse, generalInfoResponse] = await Promise.all([
-        fetch('/api/supply-breakdown'),
-        fetch('/api/general-info')
+        fetch('/api/supply-breakdown', {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        }),
+        fetch('/api/general-info', {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        })
       ]);
 
       if (!supplyResponse.ok || !generalInfoResponse.ok) {
@@ -104,7 +118,16 @@ export function StakingDetails() {
 
   useEffect(() => {
     fetchData();
-    fetchInterval.current = setInterval(() => fetchData(false), 30000);
+    // Clear any existing interval
+    if (fetchInterval.current) {
+      clearInterval(fetchInterval.current);
+    }
+    // Set new interval for 1 minute
+    fetchInterval.current = setInterval(() => {
+      console.log('Fetching staking details update...');
+      fetchData(false);
+    }, 60000); // 1 minute
+
     return () => {
       if (fetchInterval.current) {
         clearInterval(fetchInterval.current);

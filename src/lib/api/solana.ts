@@ -271,7 +271,12 @@ export async function getTPS(): Promise<ApiResponse<TPSData>> {
 export async function getMarketData(): Promise<ApiResponse<MarketData>> {
   try {
     const response = await fetch('/api/market-data', {
-      cache: 'no-store'
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
     });
 
     if (!response.ok) {

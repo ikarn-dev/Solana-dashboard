@@ -70,7 +70,15 @@ export function MarketDataCard() {
     
     // Update every minute if auto-reload is enabled
     if (isAutoReloading) {
-      fetchInterval.current = setInterval(() => fetchData(false), UPDATE_INTERVAL);
+      // Clear any existing interval
+      if (fetchInterval.current) {
+        clearInterval(fetchInterval.current);
+      }
+      // Set new interval
+      fetchInterval.current = setInterval(() => {
+        console.log('Fetching market data update...');
+        fetchData(false);
+      }, UPDATE_INTERVAL);
     }
 
     return () => {
@@ -190,7 +198,7 @@ export function MarketDataCard() {
           <div className="flex items-center space-x-4">
             {lastUpdated && (
               <span className="text-xs text-gray-500">
-                Last updated: {lastUpdated.toLocaleTimeString()}
+                Last updated: {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </span>
             )}
             <button 
