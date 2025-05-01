@@ -33,14 +33,7 @@ export async function GET() {
 
     if (!response.ok) {
       console.error('API response not ok:', response.status, response.statusText);
-      return NextResponse.json({ data: mockData }, { 
-        status: 200,
-        headers: {
-          'Cache-Control': 'no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
-      });
+      return NextResponse.json({ data: mockData }, { status: 200 });
     }
 
     const rawData = await response.json();
@@ -67,9 +60,7 @@ export async function GET() {
     }, { 
       status: 200,
       headers: {
-        'Cache-Control': 'no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
       }
     });
   } catch (error) {

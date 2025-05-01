@@ -27,7 +27,7 @@ export function MarketDataCard() {
   const retryCount = useRef<number>(0);
   const MAX_RETRIES = 3;
   const RETRY_DELAY = 5000; // 5 seconds
-  const UPDATE_INTERVAL = 1000; // Changed from 60000 to 1000 for 1-second updates
+  const UPDATE_INTERVAL = 60000; // 1 minute
 
   const fetchData = async (showLoading = true) => {
     try {
