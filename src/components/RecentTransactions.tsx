@@ -12,7 +12,10 @@ const formatTime = (timestamp: number): string => {
 };
 
 // Helper function to format signature
-const formatSignature = (signature: string): string => {
+const formatSignature = (signature: string | undefined): string => {
+  if (!signature || typeof signature !== 'string' || signature.length < 16) {
+    return 'Invalid Signature';
+  }
   return `${signature.slice(0, 8)}...${signature.slice(-8)}`;
 };
 
@@ -43,19 +46,23 @@ export function RecentTransactions() {
       }
       
       // Transform the data to match our Transaction type
-      const formattedTransactions = data.map((tx: any) => ({
-        signature: tx.signature,
-        block: tx.block,
-        fee: tx.fee,
-        programs: tx.programs || [],
-        timestamp: tx.timestamp,
-        status: tx.status,
-        time: new Date(tx.timestamp * 1000).toISOString()
-      }));
+      const formattedTransactions = data.map((tx: any) => {
+        // Ensure timestamp is a valid number
+        const timestamp = typeof tx.timestamp === 'number' ? tx.timestamp : 0;
+        return {
+          signature: tx.signature,
+          block: tx.block,
+          fee: tx.fee,
+          programs: tx.programs || [],
+          timestamp: timestamp,
+          status: tx.status,
+          time: timestamp > 0 ? new Date(timestamp * 1000).toISOString() : 'N/A'
+        };
+      });
       
       const transactionsWithTime = formattedTransactions.map(tx => ({
         ...tx,
-        time: formatTime(tx.timestamp)
+        time: tx.timestamp > 0 ? formatTime(tx.timestamp) : 'N/A'
       }));
       
       setTransactions(transactionsWithTime.slice(0, 10)); // Get top 10 transactions
@@ -171,7 +178,7 @@ export function RecentTransactions() {
                     </span>
                   </td>
                   <td className="py-3 text-gray-500">
-                    {formatTime(tx.timestamp)}
+                    {tx.time}
                   </td>
                 </tr>
               ))}

@@ -9,7 +9,9 @@ if (!API_KEY) {
 
 // Rate limiting configuration
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute window
-const REQUEST_TIMEOUT = 10000; // 10 seconds
+const REQUEST_TIMEOUT = 30000; // 30 seconds
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 5000; // 5 seconds
 
 // Common headers for API requests
 const headers = {
@@ -43,75 +45,94 @@ function checkRateLimit(endpoint: string): boolean {
 }
 
 export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const endpoint = searchParams.get('endpoint');
-    
-    if (!endpoint) {
-      return NextResponse.json(
-        { error: 'Endpoint is required' },
-        { status: 400 }
-      );
-    }
-
-    // Check rate limit
-    if (!checkRateLimit(endpoint)) {
-      const lastTime = lastRequestTime.get(endpoint) || 0;
-      const timeToWait = Math.max(0, RATE_LIMIT_WINDOW - (Date.now() - lastTime));
+  let retries = 0;
+  let endpoint: string | null = null;
+  
+  while (retries < MAX_RETRIES) {
+    try {
+      const { searchParams } = new URL(request.url);
+      endpoint = searchParams.get('endpoint');
       
-      if (timeToWait > 0) {
-        await new Promise(resolve => setTimeout(resolve, timeToWait));
+      if (!endpoint) {
+        return NextResponse.json(
+          { error: 'Endpoint is required' },
+          { status: 400 }
+        );
       }
-    }
 
-    const url = new URL(`${SOLANA_BEACH_API}${endpoint}`);
-    
-    // Optimize fetch request
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
-    
-    const response = await fetch(url.toString(), {
-      headers,
-      cache: 'no-store',
-      signal: controller.signal
-    }).finally(() => clearTimeout(timeoutId));
+      // Check rate limit
+      if (!checkRateLimit(endpoint)) {
+        const lastTime = lastRequestTime.get(endpoint) || 0;
+        const timeToWait = Math.max(0, RATE_LIMIT_WINDOW - (Date.now() - lastTime));
+        
+        if (timeToWait > 0) {
+          await new Promise(resolve => setTimeout(resolve, timeToWait));
+        }
+      }
 
-    if (response.status === 429) {
-      const retryAfter = parseInt(response.headers.get('retry-after') || '5', 10) * 1000;
-      await new Promise(resolve => setTimeout(resolve, retryAfter));
-      return GET(request);
-    }
+      const url = new URL(`${SOLANA_BEACH_API}${endpoint}`);
+      
+      // Optimize fetch request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+      
+      const response = await fetch(url.toString(), {
+        headers,
+        cache: 'no-store',
+        signal: controller.signal
+      }).finally(() => clearTimeout(timeoutId));
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      if (response.status === 429) {
+        const retryAfter = parseInt(response.headers.get('retry-after') || '5', 10) * 1000;
+        await new Promise(resolve => setTimeout(resolve, retryAfter));
+        retries++;
+        continue;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        return NextResponse.json(
+          { error: `API error: ${response.status} ${response.statusText}`, details: errorData },
+          { status: response.status }
+        );
+      }
+
+      const data = await response.json();
+      lastRequestTime.set(endpoint, Date.now());
+
+      return NextResponse.json(data, {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log(`Request timeout for ${endpoint}, retrying...`);
+        if (retries < MAX_RETRIES - 1) {
+          const delay = RETRY_DELAY * Math.pow(2, retries);
+          console.log(`Retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          retries++;
+          continue;
+        }
+        return NextResponse.json(
+          { error: 'Request timeout after multiple retries' },
+          { status: 504 }
+        );
+      }
       return NextResponse.json(
-        { error: `API error: ${response.status} ${response.statusText}`, details: errorData },
-        { status: response.status }
+        { error: 'Internal server error' },
+        { status: 500 }
       );
     }
-
-    const data = await response.json();
-    lastRequestTime.set(endpoint, Date.now());
-
-    return NextResponse.json(data, {
-      headers: {
-        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
-    });
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      return NextResponse.json(
-        { error: 'Request timeout' },
-        { status: 504 }
-      );
-    }
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
   }
+  
+  return NextResponse.json(
+    { error: 'Maximum retries exceeded' },
+    { status: 504 }
+  );
 }
 
 // Handle OPTIONS request for CORS preflight
