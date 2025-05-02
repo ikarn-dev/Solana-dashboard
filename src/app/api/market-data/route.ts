@@ -23,7 +23,7 @@ export async function GET() {
       return NextResponse.json({ data: mockData }, { status: 200 });
     }
 
-    const response = await fetch(`${apiUrl}/v2/market-data`, {
+    const response = await fetch('https://api.solanaview.com/v2/market-data', {
       headers: {
         'Accept': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
