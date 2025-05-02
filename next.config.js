@@ -14,7 +14,8 @@ const nextConfig = {
   },
   env: {
     SOLANA_BEACH_API_KEY: process.env.SOLANA_BEACH_API_KEY,
-    NEXT_PUBLIC_SOLANA_BEACH_API_URL: process.env.NEXT_PUBLIC_SOLANA_BEACH_API_URL || 'https://public-api.solanabeach.io',
+    NEXT_PUBLIC_SOLANA_API_URL: process.env.NEXT_PUBLIC_SOLANA_API_URL || 'https://api.solanaview.com',
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
   },
   async headers() {
     return [

@@ -1,20 +1,26 @@
 import { NextResponse } from 'next/server';
-import { getCachedData, setCachedData, CACHE_TTL } from '@/lib/cache';
 
-const SOLANA_BEACH_API = process.env.NEXT_PUBLIC_SOLANA_BEACH_API_URL || 'https://public-api.solanabeach.io';
+const SOLANA_BEACH_API = process.env.NEXT_PUBLIC_SOLANA_API_URL || 'https://api.solanaview.com';
 const API_KEY = process.env.SOLANA_BEACH_API_KEY;
 
-// Simple in-memory cache for validator data
-const validatorCache = new Map<string, { data: any; timestamp: number }>();
-const VALIDATOR_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+if (!API_KEY) {
+  throw new Error('SOLANA_BEACH_API_KEY environment variable is required');
+}
 
 // Rate limiting configuration
-const RATE_LIMIT_REQUESTS = 30; // Increased from 10
-const RATE_LIMIT_WINDOW = 1 * 60 * 1000; // Reduced from 5 minutes to 1 minute
-const MAX_RETRIES = 3; // Increased from 2
-const INITIAL_RETRY_DELAY = 1000; // Reduced from 2000
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute window
+const REQUEST_TIMEOUT = 10000; // 10 seconds
 
+// Common headers for API requests
+const headers = {
+  'Accept': 'application/json',
+  'Content-Type': 'application/json',
+  'Authorization': `Bearer ${API_KEY}`
+};
+
+// Rate limiting state
 const requestCounts = new Map<string, { count: number; resetTime: number }>();
+const lastRequestTime = new Map<string, number>();
 
 function checkRateLimit(endpoint: string): boolean {
   const now = Date.now();
@@ -27,7 +33,7 @@ function checkRateLimit(endpoint: string): boolean {
     return true;
   }
   
-  if (current.count >= RATE_LIMIT_REQUESTS) {
+  if (current.count >= 1) {
     return false;
   }
   
@@ -36,42 +42,10 @@ function checkRateLimit(endpoint: string): boolean {
   return true;
 }
 
-async function fetchWithRetry(url: string, options: RequestInit, retries = 0): Promise<Response> {
-  try {
-    const response = await fetch(url, options);
-    
-    if (response.status === 429 && retries < 3) {
-      const delay = 1000 * Math.pow(2, retries);
-      await new Promise(resolve => setTimeout(resolve, delay));
-      return fetchWithRetry(url, options, retries + 1);
-    }
-    
-    return response;
-  } catch (error) {
-    if (retries < 3) {
-      const delay = 1000 * Math.pow(2, retries);
-      await new Promise(resolve => setTimeout(resolve, delay));
-      return fetchWithRetry(url, options, retries + 1);
-    }
-    throw error;
-  }
-}
-
 export async function GET(request: Request) {
   try {
-    if (!API_KEY) {
-      console.error('SOLANA_BEACH_API_KEY is not set');
-      return NextResponse.json(
-        { error: 'API key is required' },
-        { status: 401 }
-      );
-    }
-
-    // Get the URL and search params
     const { searchParams } = new URL(request.url);
     const endpoint = searchParams.get('endpoint');
-    const limit = searchParams.get('limit');
-    const offset = searchParams.get('offset');
     
     if (!endpoint) {
       return NextResponse.json(
@@ -80,35 +54,36 @@ export async function GET(request: Request) {
       );
     }
 
-    // Check cache for all endpoints
-    const cacheKey = `${endpoint}?limit=${limit}&offset=${offset}`;
-    const cachedData = getCachedData(cacheKey);
-    if (cachedData) {
-      return NextResponse.json(cachedData);
+    // Check rate limit
+    if (!checkRateLimit(endpoint)) {
+      const lastTime = lastRequestTime.get(endpoint) || 0;
+      const timeToWait = Math.max(0, RATE_LIMIT_WINDOW - (Date.now() - lastTime));
+      
+      if (timeToWait > 0) {
+        await new Promise(resolve => setTimeout(resolve, timeToWait));
+      }
     }
 
     const url = new URL(`${SOLANA_BEACH_API}${endpoint}`);
-    if (limit) url.searchParams.append('limit', limit);
-    if (offset) url.searchParams.append('offset', offset);
-
-    console.log(`Fetching from: ${url.toString()}`);
-
+    
+    // Optimize fetch request
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+    
     const response = await fetch(url.toString(), {
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${API_KEY}`,
-        'Origin': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-      },
-      cache: 'no-store'
-    });
+      headers,
+      cache: 'no-store',
+      signal: controller.signal
+    }).finally(() => clearTimeout(timeoutId));
+
+    if (response.status === 429) {
+      const retryAfter = parseInt(response.headers.get('retry-after') || '5', 10) * 1000;
+      await new Promise(resolve => setTimeout(resolve, retryAfter));
+      return GET(request);
+    }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('API Error:', {
-        status: response.status,
-        statusText: response.statusText,
-        error: errorData
-      });
       return NextResponse.json(
         { error: `API error: ${response.status} ${response.statusText}`, details: errorData },
         { status: response.status }
@@ -116,15 +91,24 @@ export async function GET(request: Request) {
     }
 
     const data = await response.json();
+    lastRequestTime.set(endpoint, Date.now());
 
-    // Cache the data
-    setCachedData(cacheKey, data, CACHE_TTL.MEDIUM);
-
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    });
   } catch (error) {
-    console.error('Error in proxy:', error);
+    if (error instanceof Error && error.name === 'AbortError') {
+      return NextResponse.json(
+        { error: 'Request timeout' },
+        { status: 504 }
+      );
+    }
     return NextResponse.json(
-      { error: 'Failed to fetch data' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

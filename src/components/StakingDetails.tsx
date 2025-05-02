@@ -6,6 +6,8 @@ import { Coins, TrendingUp, Award } from 'lucide-react';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { SupplyBreakdown, GeneralInfo } from '@/lib/api/types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { getStakingAPY } from '@/lib/api/solana';
+
 
 // Helper function to format lamports to SOL in millions
 const formatToMillions = (lamports: number): string => {
@@ -50,6 +52,7 @@ export function StakingDetails() {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const lastFetchTime = useRef<number>(0);
   const fetchInterval = useRef<NodeJS.Timeout>();
+  const [apy, setApy] = useState<number | null>(null);
 
   // Define colors for pie charts
   const chartColors = {
@@ -103,8 +106,19 @@ export function StakingDetails() {
         throw new Error('No data received from API');
       }
 
+      // Log the general info response for debugging
+      console.log('General Info Response:', generalInfoResult);
+
+      // Ensure dailyRewards is properly formatted
+      const formattedGeneralInfo = {
+        ...generalInfoResult.data,
+        dailyRewards: typeof generalInfoResult.data.dailyRewards === 'number' 
+          ? generalInfoResult.data.dailyRewards 
+          : 0
+      };
+
       setSupplyData(supplyResult.data);
-      setGeneralInfo(generalInfoResult.data);
+      setGeneralInfo(formattedGeneralInfo);
       setError(null);
       setLastUpdated(new Date());
       lastFetchTime.current = now;
@@ -133,6 +147,26 @@ export function StakingDetails() {
         clearInterval(fetchInterval.current);
       }
     };
+  }, []);
+
+  useEffect(() => {
+    async function fetchStakingAPY() {
+      try {
+        setLoading(true);
+        const response = await getStakingAPY();
+        if (response.success) {
+          setApy(response.data.apy);
+        } else {
+          setError('Failed to fetch staking APY');
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch staking APY');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchStakingAPY();
   }, []);
 
   if (loading) {
@@ -331,7 +365,7 @@ export function StakingDetails() {
                       </div>
                     </div>
                     <div className="text-2xl font-mono text-lime-600">
-                      {(generalInfo.stakingYield || 0).toFixed(2)}%
+                      {apy?.toFixed(2)}%
                     </div>
                   </div>
 
@@ -344,7 +378,7 @@ export function StakingDetails() {
                       </div>
                     </div>
                     <div className="text-2xl font-mono text-lime-600">
-                      {formatToSol(generalInfo.dailyRewards || 0)} SOL
+                      {generalInfo?.dailyRewards ? formatToSol(generalInfo.dailyRewards) : '0.00'} SOL
                     </div>
                   </div>
                 </div>
