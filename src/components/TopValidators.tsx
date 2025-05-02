@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { TopValidator } from '@/lib/api/types';
+import { ValidatorLink } from './ValidatorLink';
 
 // Custom number formatter to display exact values
 const formatExactNumber = (num: number): string => {
@@ -25,7 +26,7 @@ export function TopValidators() {
     
     setIsRefreshing(true);
     try {
-      const response = await fetch(`/api/proxy?endpoint=/v1/validators/top&limit=100`, {
+      const response = await fetch('/api/validators/top?limit=20', {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -107,7 +108,11 @@ export function TopValidators() {
             <h2 className="text-xl font-semibold text-lime-600">Top Validators</h2>
             {lastUpdated && (
               <span className="text-xs text-gray-500">
-                Last updated: {lastUpdated.toLocaleTimeString()}
+                <ValidatorLink 
+                  votePubkey={validators[0].votePubkey} 
+                  name={validators[0].name} 
+                  className="text-sm font-medium text-gray-700"
+                />  Last updated: {lastUpdated.toLocaleTimeString()}
               </span>
             )}
           </div>

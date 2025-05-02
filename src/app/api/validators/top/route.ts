@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const limit = searchParams.get('limit');
 
-    const response = await fetch(`${SOLANA_BEACH_API}/v1/validators/top`, {
+    const response = await fetch('https://api.solanaview.com/v1/validators/top', {
       headers: {
         'Accept': 'application/json',
         'Authorization': `Bearer ${API_KEY}`,
@@ -53,11 +53,7 @@ export async function GET(request: Request) {
     const limitedData = limit ? data.slice(0, parseInt(limit)) : data;
     
     return NextResponse.json(
-      { 
-        data: limitedData,
-        total: data.length,
-        hasMore: limit ? data.length > parseInt(limit) : false
-      },
+      limitedData,
       {
         headers: {
           'Access-Control-Allow-Origin': '*',

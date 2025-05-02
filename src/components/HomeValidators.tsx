@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { TopValidator } from '@/lib/api/types';
+import { ValidatorLink } from './ValidatorLink';
 
 // Custom number formatter to display exact values
 const formatExactNumber = (num: number): string => {
@@ -25,7 +26,7 @@ export function HomeValidators() {
     
     setIsRefreshing(true);
     try {
-      const response = await fetch(`/api/proxy?endpoint=/v1/validators/top&limit=10`, {
+      const response = await fetch('/api/validators/top?limit=10', {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -45,8 +46,7 @@ export function HomeValidators() {
         throw new Error('Invalid response format');
       }
       
-      // Ensure we only show 10 validators
-      setValidators(data.slice(0, 10));
+      setValidators(data);
       setLastUpdated(new Date());
       setError(null);
     } catch (err) {
