@@ -54,7 +54,6 @@ export interface TPSData {
   voteTransactionsPerSecond: number;
   userTransactionsPerSecond: number;
   totalTransactionsPerSecond: number;
-  timestamp: number;
 }
 
 // Market Data Types
@@ -207,17 +206,24 @@ export interface TransactionInstruction {
 }
 
 export interface Transaction {
-  signature: string;
-  timestamp: number;
-  fee: number;
-  status: string;
-  block: number;
-  programs: string[];
-  time: string;
+  transactionHash: string;
+  blockNumber: number;
+  index: number;
+  accounts: TransactionAccount[];
+  header: {
+    numRequiredSignatures: number;
+    numReadonlySignedAccounts: number;
+    numReadonlyUnsignedAccounts: number;
+  };
+  instructions: TransactionInstruction[];
 }
 
 export interface RecentTransactionsResponse {
   transactions: Transaction[];
-  total: number;
+  pagination: {
+    total: number;
+    offset: number;
+    limit: number;
+  };
 }
 

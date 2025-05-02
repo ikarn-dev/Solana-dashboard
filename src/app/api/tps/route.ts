@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server';
 import { ApiResponse, TPSData } from '@/lib/api/types';
 
+// Mock data for development/testing
+const mockData: TPSData = {
+  voteTransactionsPerSecond: 0,
+  userTransactionsPerSecond: 0,
+  totalTransactionsPerSecond: 0
+};
+
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
@@ -11,9 +18,10 @@ export async function GET() {
     if (!apiKey) {
       console.error('API key not configured');
       return NextResponse.json({ 
-        error: 'API key not configured'
+        data: mockData,
+        timestamp: Date.now()
       }, { 
-        status: 500,
+        status: 200,
         headers: {
           'Cache-Control': 'no-store, must-revalidate',
           'Access-Control-Allow-Origin': '*',
@@ -49,19 +57,19 @@ export async function GET() {
         );
       }
 
-      // For other errors, return appropriate error response
-      return NextResponse.json(
-        { error: `API request failed with status ${response.status}` },
-        { 
-          status: response.status,
-          headers: {
-            'Cache-Control': 'no-store, must-revalidate',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-          }
+      // For other errors, return mock data with appropriate status
+      return NextResponse.json({ 
+        data: mockData,
+        timestamp: Date.now()
+      }, { 
+        status: response.status,
+        headers: {
+          'Cache-Control': 'no-store, must-revalidate',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization'
         }
-      );
+      });
     }
 
     const rawData = await response.json();
@@ -74,8 +82,7 @@ export async function GET() {
     const data: TPSData = {
       voteTransactionsPerSecond: voteTPS,
       userTransactionsPerSecond: userTPS,
-      totalTransactionsPerSecond: totalTPS,
-      timestamp: Date.now()
+      totalTransactionsPerSecond: totalTPS
     };
 
     return NextResponse.json({ 
@@ -95,9 +102,10 @@ export async function GET() {
   } catch (error) {
     console.error('Error in TPS route:', error);
     return NextResponse.json({ 
-      error: 'Internal server error'
+      data: mockData,
+      timestamp: Date.now()
     }, { 
-      status: 500,
+      status: 200,
       headers: {
         'Cache-Control': 'no-store, must-revalidate',
         'Access-Control-Allow-Origin': '*',
