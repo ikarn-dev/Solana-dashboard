@@ -90,7 +90,7 @@ export function formatNumber(value: number): string {
   }
 
   return value.toFixed(2);
-}
+} 
 
 export const formatExactNumber = (num: number): string => {
   return num.toLocaleString('en-US', {

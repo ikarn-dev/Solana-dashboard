@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
 import { useState, useEffect } from 'react';
 import Reloading from '@/components/Reloading';
 import { ValidatorStats } from '@/components/ValidatorStats';
-import TopValidators from '@/components/TopValidators';
+import { TopValidators } from '@/components/TopValidators';
 
 export default function ValidatorsPage() {
   const [isLoading, setIsLoading] = useState(true);

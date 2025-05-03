@@ -89,7 +89,7 @@ export default function ValidatorProfilePage({ params }: { params: { votePubkey:
             </div>
           </div>
         </div>
-      </div>
+        </div>
     );
   }
 
@@ -116,19 +116,19 @@ export default function ValidatorProfilePage({ params }: { params: { votePubkey:
         >
           <div className="bg-white/80 backdrop-blur-lg rounded-xl p-6 shadow-lg">
             <div className="flex items-center space-x-4 mb-6">
-              {validator.pictureURL ? (
-                <img 
-                  src={validator.pictureURL} 
+          {validator.pictureURL ? (
+            <img 
+              src={validator.pictureURL} 
                   alt={validator.moniker || 'Validator'} 
                   className="w-16 h-16 rounded-full object-cover border border-lime-200"
-                />
-              ) : (
+            />
+          ) : (
                 <div className="w-16 h-16 rounded-full bg-gradient-to-br from-lime-100 to-lime-200 flex items-center justify-center border border-lime-200 overflow-hidden">
                   <span className="text-xl font-bold text-lime-600">
                     {(validator.moniker || validator.votePubkey.slice(0, 1)).toUpperCase()}
-                  </span>
-                </div>
-              )}
+              </span>
+            </div>
+          )}
               <div>
                 <h1 className="text-2xl font-bold text-lime-600">
                   {validator.moniker || 'Unknown Validator'}
@@ -156,8 +156,8 @@ export default function ValidatorProfilePage({ params }: { params: { votePubkey:
                       <span className="text-gray-600">Commission:</span>
                       <span className="font-mono">{validator.commission}%</span>
                     </p>
-                  </div>
-                </div>
+            </div>
+          </div>
 
                 <div className="bg-lime-50/50 rounded-lg p-4">
                   <h3 className="text-sm font-semibold text-lime-600 mb-2">Node Information</h3>
@@ -170,11 +170,11 @@ export default function ValidatorProfilePage({ params }: { params: { votePubkey:
                       <span className="text-gray-600">Last Vote:</span>
                       <span className="font-mono">
                         {new Date(validator.lastVote * 1000).toLocaleString()}
-                      </span>
+                </span>
                     </p>
                   </div>
-                </div>
-              </div>
+                        </div>
+                        </div>
 
               <div className="space-y-4">
                 <div className="bg-lime-50/50 rounded-lg p-4">
@@ -192,12 +192,12 @@ export default function ValidatorProfilePage({ params }: { params: { votePubkey:
                           marginWidth={0}
                           src={`https://www.openstreetmap.org/export/embed.html?bbox=${validator.ll[1]-0.1},${validator.ll[0]-0.1},${validator.ll[1]+0.1},${validator.ll[0]+0.1}&layer=mapnik&marker=${validator.ll[0]},${validator.ll[1]}`}
                         />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+                        </div>
+                      )}
+                    </div>
             </div>
+          </div>
+        </div>
           </div>
         </motion.div>
       </div>

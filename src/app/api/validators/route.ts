@@ -1,57 +1,44 @@
 import { NextResponse } from 'next/server';
-import { Validator, TopValidator } from '@/lib/api/types';
+import { getTopValidators } from '@/lib/api/solana';
+import { ApiResponse, Validator } from '@/lib/api/types';
 
-// Mock data for testing
-const mockValidators: Validator[] = [
-  {
-    votePubkey: 'mock1',
-    name: 'Mock Validator 1',
-    version: '1.0.0',
-    activatedStake: 0,
-    commission: 0,
-    skipRate: 0,
-    lastVote: 0,
-    voteDistance: 0,
-    ll: [0, 0],
-    pictureURL: '',
-    rank: 1
-  }
-];
-
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const response = await fetch('/api/proxy?endpoint=/v1/validators/top');
+    const { searchParams } = new URL(request.url);
+    const offset = parseInt(searchParams.get('offset') || '0');
     
-    if (!response.ok) {
-      console.error('Failed to fetch validators:', response.statusText);
-      return NextResponse.json(mockValidators);
-    }
-
-    const data = await response.json();
+    const validators = await getTopValidators(offset);
     
-    if (!Array.isArray(data)) {
-      console.error('Invalid response format');
-      return NextResponse.json(mockValidators);
-    }
-
     // Transform TopValidator[] to Validator[]
-    const mappedValidators: Validator[] = data.map((v: TopValidator, index: number) => ({
+    const mappedValidators: Validator[] = validators.data.map((v, index) => ({
       votePubkey: v.votePubkey,
       name: v.moniker || 'Unnamed Validator',
       version: v.version || 'Unknown',
-      activatedStake: v.activatedStake,
-      commission: v.commission,
+      activatedStake: v.activatedStake || 0,
+      commission: v.commission || 0,
       skipRate: 0, // Default value since it's not in TopValidator
-      lastVote: v.lastVote,
+      lastVote: v.lastVote || Math.floor(Date.now() / 1000),
       voteDistance: 0, // Default value since it's not in TopValidator
       ll: v.ll || [0, 0],
       pictureURL: v.pictureURL || '',
-      rank: index + 1
+      rank: index + 1,
+      website: undefined
     }));
 
-    return NextResponse.json(mappedValidators);
+    return NextResponse.json({
+      data: mappedValidators,
+      timestamp: Date.now(),
+      success: true
+    } as ApiResponse<Validator[]>);
   } catch (error) {
     console.error('Error fetching validators:', error);
-    return NextResponse.json(mockValidators);
+    return NextResponse.json(
+      {
+        data: [],
+        timestamp: Date.now(),
+        success: false
+      } as ApiResponse<Validator[]>,
+      { status: 500 }
+    );
   }
 } 

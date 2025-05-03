@@ -63,31 +63,66 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = 0): P
 }
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const endpoint = searchParams.get('endpoint');
-
-  if (!endpoint) {
-    return NextResponse.json({ error: 'Endpoint is required' }, { status: 400 });
-  }
-
   try {
-    const response = await fetch(`${SOLANA_VIEW_API}${endpoint}`, {
+    if (!API_KEY) {
+      return NextResponse.json(
+        { error: 'API key is not configured' },
+        { status: 500 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const endpoint = searchParams.get('endpoint');
+    
+    if (!endpoint) {
+      return NextResponse.json(
+        { error: 'Endpoint parameter is required' },
+        { status: 400 }
+      );
+    }
+
+    // Check rate limit
+    if (!checkRateLimit(endpoint)) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded' },
+        { status: 429 }
+      );
+    }
+
+    // Check cache first
+    const cacheKey = `proxy:${endpoint}`;
+    const cachedData = await getCachedData(cacheKey);
+    if (cachedData) {
+      return NextResponse.json(cachedData);
+    }
+
+    // Make the request to SolanaView API
+    const url = `${SOLANA_VIEW_API}${endpoint}`;
+    const response = await fetchWithRetry(url, {
       headers: {
-        'Authorization': `Bearer ${process.env.SOLANA_BEACH_API_KEY}`,
+        'Accept': 'application/json',
         'Content-Type': 'application/json',
-      },
+        'Authorization': `Bearer ${API_KEY}`
+      }
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      return NextResponse.json(
+        { error: `API error: ${response.status} ${response.statusText}` },
+        { status: response.status }
+      );
     }
 
     const data = await response.json();
+    
+    // Cache the response
+    await setCachedData(cacheKey, data, CACHE_TTL.MEDIUM);
+
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error in proxy route:', error);
+    console.error('Proxy error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch data' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

@@ -1,22 +1,10 @@
 import { NextResponse } from 'next/server';
-import { NetworkStatus } from '@/lib/api/types';
 
 // Add CORS headers to all responses
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
-
-// Mock data for testing
-const mockNetworkStatus: NetworkStatus = {
-  lastSyncedSlot: 0,
-  lastNetworkSlot: 0,
-  networkLag: 0,
-  laggingBehind: false,
-  epochProgress: 0,
-  currentEpoch: 0,
-  slotsPerEpoch: 432000
 };
 
 export async function GET() {
@@ -41,28 +29,22 @@ export async function GET() {
       throw new Error(`API responded with status: ${response.status} - ${errorText}`);
     }
     
-    const responseData = await response.json();
-    
-    // Transform the response data to match our NetworkStatus type
-    const data: NetworkStatus = {
-      lastSyncedSlot: responseData.lastSyncedSlot,
-      lastNetworkSlot: responseData.lastNetworkSlot,
-      networkLag: responseData.networkLag,
-      laggingBehind: responseData.laggingBehind,
-      epochProgress: 0, // Calculate this if needed
-      currentEpoch: 0, // Calculate this if needed
-      slotsPerEpoch: 432000 // Standard Solana slots per epoch
-    };
-
+    const data = await response.json();
     return NextResponse.json(data, {
       headers: corsHeaders
     });
   } catch (error) {
     console.error('Error in network-status route:', error);
-    // Return mock data in case of error
-    return NextResponse.json(mockNetworkStatus, {
-      headers: corsHeaders
-    });
+    return NextResponse.json(
+      { 
+        error: 'Failed to fetch network status',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { 
+        status: 500,
+        headers: corsHeaders
+      }
+    );
   }
 }
 
