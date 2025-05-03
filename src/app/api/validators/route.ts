@@ -21,7 +21,7 @@ const mockValidators: Validator[] = [
 
 export async function GET() {
   try {
-    const validators = await getTopValidators(0);
+    const validators = await getTopValidators();
     
     if (!validators.success || !validators.data) {
       console.error('Failed to fetch validators:', validators.error);
