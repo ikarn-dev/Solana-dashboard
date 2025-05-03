@@ -4,66 +4,68 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { TopValidator } from '@/lib/api/types';
-import { getTopValidators } from '@/lib/api/solana';
-
-// Custom number formatter to display exact values
-const formatExactNumber = (num: number): string => {
-  return num.toLocaleString('en-US', {
-    maximumFractionDigits: 0,
-    useGrouping: true
-  });
-};
+import { formatExactNumber } from '@/lib/utils';
 
 const ITEMS_PER_PAGE = 10;
 const INITIAL_LIMIT = 20; // Fetch 20 initially to have some buffer for pagination
 
-export function TopValidators() {
+export default function TopValidators() {
   const [validators, setValidators] = useState<TopValidator[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [retryCount, setRetryCount] = useState(0);
-  const MAX_RETRIES = 3;
-  const RETRY_DELAY = 5000;
-
-  const fetchValidators = async () => {
-    if (isRefreshing) return;
-    
-    setIsRefreshing(true);
-    try {
-      const response = await getTopValidators(INITIAL_LIMIT);
-      
-      if (!response.success) {
-        throw new Error('Failed to fetch validators');
-      }
-      
-      setValidators(response.data);
-      setLastUpdated(new Date());
-      setError(null);
-      setRetryCount(0);
-    } catch (err) {
-      console.error('Error fetching validators:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch validators';
-      setError(errorMessage);
-      
-      if (errorMessage.includes('Rate limit exceeded') && retryCount < MAX_RETRIES) {
-        setRetryCount(prev => prev + 1);
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * Math.pow(2, retryCount)));
-        fetchValidators();
-      }
-    } finally {
-      setIsRefreshing(false);
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    fetchValidators();
-    const interval = setInterval(fetchValidators, 10 * 60 * 1000);
+    const fetchData = async () => {
+      try {
+        const response = await fetch('/api/validators');
+        if (!response.ok) throw new Error('Failed to fetch validators');
+        
+        const result = await response.json();
+        if (!Array.isArray(result)) {
+          throw new Error('Invalid response format');
+        }
+        
+        // Ensure we have an array of TopValidator
+        const validatorsData: TopValidator[] = result.map(validator => ({
+          votePubkey: validator.votePubkey,
+          moniker: validator.moniker || 'Unnamed Validator',
+          version: validator.version || 'Unknown',
+          activatedStake: validator.activatedStake,
+          commission: validator.commission,
+          lastVote: validator.lastVote,
+          ll: validator.ll || [0, 0],
+          pictureURL: validator.pictureURL || '',
+          delegatorCount: validator.delegatorCount || 0
+        }));
+        
+        setValidators(validatorsData);
+        setLastUpdated(new Date());
+        setError(null);
+        setRetryCount(0);
+      } catch (err) {
+        console.error('Error fetching validators:', err);
+        setError(err instanceof Error ? err.message : 'An error occurred');
+        
+        // Implement exponential backoff for retries
+        if (retryCount < 3) {
+          const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+          }, delay);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+    const interval = setInterval(fetchData, 30000); // Update every 30 seconds
+
     return () => clearInterval(interval);
-  }, []);
+  }, [retryCount]);
 
   const totalPages = Math.ceil(validators.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -93,13 +95,12 @@ export function TopValidators() {
       <div className="dashboard-card bg-white/80 backdrop-blur-lg rounded-xl p-6 shadow-lg">
         <div className="flex flex-col items-center justify-center space-y-4">
           <p className="text-red-600">Error: {error}</p>
-          {retryCount < MAX_RETRIES ? (
-            <p className="text-sm text-gray-500">Retrying in {Math.pow(2, retryCount) * 5} seconds...</p>
+          {retryCount < 3 ? (
+            <p className="text-sm text-gray-500">Retrying in {Math.min(1000 * Math.pow(2, retryCount), 10000) / 1000} seconds...</p>
           ) : (
             <button
               onClick={() => {
                 setRetryCount(0);
-                fetchValidators();
               }}
               className="px-4 py-2 bg-lime-100 text-lime-600 rounded-lg hover:bg-lime-200 transition-colors"
             >
