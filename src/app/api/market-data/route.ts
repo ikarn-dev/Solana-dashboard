@@ -1,70 +1,91 @@
 import { NextResponse } from 'next/server';
-import { MarketData } from '@/lib/api/types';
 
-// Mock data for development/testing
-const mockData: MarketData = {
-  timestamp: Date.now(),
-  price: 0,
-  percentChange1h: 0,
-  percentChange24h: 0,
-  volume24h: 0,
-  marketCap: 0,
-  fullyDilutedMarketCap: 0,
-  history: []
-};
-
-export async function GET() {
+// Function to fetch market data
+async function fetchMarketData() {
   try {
+    console.log('Fetching market data from SolanaView...');
+    
     const apiKey = process.env.SOLANA_BEACH_API_KEY;
-    const apiUrl = process.env.NEXT_PUBLIC_SOLANA_BEACH_API_URL || 'https://public-api.solanabeach.io';
-
     if (!apiKey) {
-      console.error('API key not configured');
-      return NextResponse.json({ data: mockData }, { status: 200 });
+      throw new Error('SOLANA_BEACH_API_KEY is not configured');
     }
 
     const response = await fetch('https://api.solanaview.com/v2/market-data', {
+      method: 'GET',
       headers: {
         'Accept': 'application/json',
+        'User-Agent': 'Solana Dashboard/1.0',
         'Authorization': `Bearer ${apiKey}`,
+        'Origin': 'https://solana-dashboard.vercel.app'
       },
       cache: 'no-store'
     });
-
+    
     if (!response.ok) {
-      console.error('API response not ok:', response.status, response.statusText);
-      return NextResponse.json({ data: mockData }, { status: 200 });
+      const errorText = await response.text();
+      console.error('API Error Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText
+      });
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log('Raw API response:', data);
+    
+    // Validate required fields
+    if (!data || typeof data.price !== 'number' || typeof data.volume24h !== 'number') {
+      console.error('Invalid data format:', data);
+      throw new Error('Invalid market data response format');
     }
 
-    const rawData = await response.json();
-
-    // Transform the data to match our MarketData interface
-    const transformedData: MarketData = {
-      timestamp: rawData.timestamp || Date.now(),
-      price: Number(rawData.price) || 0,
-      percentChange1h: Number(rawData.percentChange1h) || 0,
-      percentChange24h: Number(rawData.percentChange24h) || 0,
-      volume24h: Number(rawData.volume24h) || 0,
-      marketCap: Number(rawData.marketCap) || 0,
-      fullyDilutedMarketCap: Number(rawData.fullyDilutedMarketCap) || 0,
-      history: (rawData.history || []).map((item: any) => ({
-        timestamp: item.timestamp || Date.now(),
-        price: Number(item.price) || 0,
-        volume24h: Number(item.volume24h) || 0
-      }))
+    // Return data in the expected format
+    return {
+      price: data.price,
+      volume24h: data.volume24h,
+      percentChange1h: data.percentChange1h || 0,
+      percentChange24h: data.percentChange24h || 0,
+      marketCap: data.marketCap || 0,
+      timestamp: data.timestamp || Math.floor(Date.now() / 1000)
     };
+  } catch (error) {
+    console.error('Error in fetchMarketData:', error);
+    throw error; // Let the calling function handle the error
+  }
+}
 
-    return NextResponse.json({ 
-      data: transformedData,
-      timestamp: Date.now()
-    }, { 
-      status: 200,
+export async function GET() {
+  try {
+    const data = await fetchMarketData();
+    return NextResponse.json(data, {
       headers: {
-        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60'
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
       }
     });
   } catch (error) {
-    console.error('Error fetching market data:', error);
-    return NextResponse.json({ data: mockData }, { status: 200 });
+    console.error('Error in market data API route:', error);
+    return NextResponse.json({ 
+      error: error instanceof Error ? error.message : 'Failed to fetch market data',
+      timestamp: Math.floor(Date.now() / 1000)
+    }, { 
+      status: 500,
+      headers: {
+        'Cache-Control': 'no-store'
+      }
+    });
   }
+}
+
+// Handle OPTIONS requests for CORS
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
 } 
