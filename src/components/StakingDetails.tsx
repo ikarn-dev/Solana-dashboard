@@ -42,9 +42,18 @@ const formatSolValueNoSuffix = (value: number): string => {
   return `${paddedWhole}.${decimal}`;
 };
 
+// Helper function to format SOL value for display with commas and 2 decimal places
+const formatSolValue = (value: number): string => {
+  return value.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+};
+
 export function StakingDetails() {
   const [supplyData, setSupplyData] = useState<SupplyBreakdown | null>(null);
   const [generalInfo, setGeneralInfo] = useState<GeneralInfo | null>(null);
+  const [apy, setApy] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -71,26 +80,29 @@ export function StakingDetails() {
         return;
       }
       
-      const [supplyResponse, generalInfoResponse] = await Promise.all([
+      const [supplyResponse, generalResponse] = await Promise.all([
         fetch('/api/supply-breakdown'),
         fetch('/api/general-info')
       ]);
 
-      if (!supplyResponse.ok || !generalInfoResponse.ok) {
-        throw new Error(`HTTP error! status: ${supplyResponse.status || generalInfoResponse.status}`);
+      if (!supplyResponse.ok || !generalResponse.ok) {
+        throw new Error(`HTTP error! status: ${supplyResponse.status || generalResponse.status}`);
       }
       
-      const [supplyResult, generalInfoResult] = await Promise.all([
+      const [supplyResult, generalResult] = await Promise.all([
         supplyResponse.json(),
-        generalInfoResponse.json()
+        generalResponse.json()
       ]);
 
-      if (!supplyResult.data || !generalInfoResult.data) {
+      console.log('Supply Data:', JSON.stringify(supplyResult.data, null, 2));
+      console.log('General Info:', JSON.stringify(generalResult.data, null, 2));
+
+      if (!supplyResult.data || !generalResult.data) {
         throw new Error('No data received from API');
       }
 
       setSupplyData(supplyResult.data);
-      setGeneralInfo(generalInfoResult.data);
+      setApy(generalResult.data.stakingYield); // Use staking yield from API
       setError(null);
       setLastUpdated(new Date());
       lastFetchTime.current = now;
@@ -112,7 +124,15 @@ export function StakingDetails() {
     };
   }, []);
 
-  if (loading) {
+  if (error) {
+    return (
+      <div className="dashboard-card bg-white/80 backdrop-blur-lg rounded-xl p-6 shadow-lg">
+        <p className="text-red-600">Error: {error}</p>
+      </div>
+    );
+  }
+
+  if (!supplyData) {
     return (
       <div className="dashboard-card bg-white/80 backdrop-blur-lg rounded-xl p-6 shadow-lg">
         <div className="animate-pulse">
@@ -124,18 +144,6 @@ export function StakingDetails() {
         </div>
       </div>
     );
-  }
-
-  if (error) {
-    return (
-      <div className="dashboard-card bg-white/80 backdrop-blur-lg rounded-xl p-6 shadow-lg">
-        <p className="text-red-600">Error: {error}</p>
-      </div>
-    );
-  }
-
-  if (!supplyData || !generalInfo) {
-    return null;
   }
 
   const stakeRatio = (supplyData.stake.effective / supplyData.supply.total) * 100;
@@ -170,6 +178,34 @@ export function StakingDetails() {
       );
     }
     return null;
+  };
+
+  // Calculate daily rewards based on APY and effective stake
+  const calculateDailyRewards = (): number => {
+    if (!supplyData || !apy) {
+      console.log('Missing data:', { 
+        hasSupplyData: !!supplyData,
+        hasApy: !!apy,
+        effectiveStake: supplyData?.stake.effective,
+        stakingYield: apy
+      });
+      return 0;
+    }
+
+    const effectiveStakeInSol = lamportsToSol(supplyData.stake.effective);
+    const dailyApy = apy / 365; // Convert annual percentage to daily
+    const dailyRewards = effectiveStakeInSol * (dailyApy / 100); // Calculate daily rewards in SOL
+    
+    console.log('Daily Rewards Calculation:', {
+      'Effective Stake (lamports)': supplyData.stake.effective,
+      'Effective Stake (SOL)': effectiveStakeInSol,
+      'APY (%)': apy,
+      'Daily APY (%)': dailyApy,
+      'Daily Rewards (SOL)': dailyRewards,
+      'Calculation': `${effectiveStakeInSol} * (${apy} / 365 / 100) = ${dailyRewards}`
+    });
+    
+    return dailyRewards;
   };
 
   return (
@@ -308,7 +344,7 @@ export function StakingDetails() {
                       </div>
                     </div>
                     <div className="text-2xl font-mono text-lime-600">
-                      {(generalInfo.stakingYield || 0).toFixed(2)}%
+                      {apy.toFixed(2)}%
                     </div>
                   </div>
 
@@ -321,7 +357,7 @@ export function StakingDetails() {
                       </div>
                     </div>
                     <div className="text-2xl font-mono text-lime-600">
-                      {formatToSol(generalInfo.dailyRewards || 0)} SOL
+                      {formatSolValue(calculateDailyRewards())} SOL
                     </div>
                   </div>
                 </div>

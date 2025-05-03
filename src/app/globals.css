@@ -364,4 +364,23 @@ p {
 
 .hover\:bg-accent:hover {
   background-color: var(--accent-hover);
+}
+
+@keyframes priceUpdate {
+  0% {
+    transform: scale(1);
+    color: #10B981;
+  }
+  50% {
+    transform: scale(1.1);
+    color: #059669;
+  }
+  100% {
+    transform: scale(1);
+    color: #10B981;
+  }
+}
+
+.price-update {
+  animation: priceUpdate 1s ease-in-out;
 } 

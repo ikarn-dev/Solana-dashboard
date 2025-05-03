@@ -5,7 +5,7 @@ import { Menu, ArrowUp } from 'lucide-react';
 import NetworkStatus from '@/components/NetworkStatus';
 import { StakingDetails } from '@/components/StakingDetails';
 import TPSDisplay from '@/components/TPSDisplay';
-import { MarketDataCard } from '@/components/MarketData';
+import MarketDataCard from '@/components/MarketData';
 import { RecentBlocks } from '@/components/RecentBlocks';
 import { HomeValidators } from '@/components/HomeValidators';
 import { RecentTransactions } from '@/components/RecentTransactions';

@@ -11,7 +11,7 @@ export async function GET() {
       return NextResponse.json({ 
         success: false,
         error: 'API key not configured',
-        data: null,
+        data: { apy: 0 },
         timestamp: Date.now()
       }, { 
         status: 500,
@@ -24,7 +24,7 @@ export async function GET() {
       });
     }
 
-    const response = await fetch(`${apiUrl}/v1/general-info`, {
+    const response = await fetch(`${apiUrl}/v1/staking-apy`, {
       headers: {
         'Accept': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
@@ -36,8 +36,8 @@ export async function GET() {
       return NextResponse.json(
         { 
           success: false,
-          error: response.status === 403 ? 'API key is invalid or has insufficient permissions' : 'Failed to fetch general info',
-          data: null,
+          error: response.status === 403 ? 'API key is invalid or has insufficient permissions' : 'Failed to fetch APY data',
+          data: { apy: 0 },
           timestamp: Date.now()
         },
         { 
@@ -52,26 +52,18 @@ export async function GET() {
     }
 
     const rawData = await response.json();
+    const apyValue = parseFloat(rawData.apy) || 0;
+
+    // Log the raw data and parsed value for debugging
+    console.log('APY API Response:', {
+      rawData,
+      parsedApy: apyValue
+    });
 
     return NextResponse.json({ 
       success: true,
       data: {
-        activatedStake: rawData.activatedStake,
-        circulatingSupply: rawData.circulatingSupply,
-        totalSupply: rawData.totalSupply,
-        stakingYield: rawData.stakingYield,
-        dailyPriceChange: rawData.dailyPriceChange,
-        dailyVolume: rawData.dailyVolume,
-        tokenPrice: rawData.tokenPrice,
-        avgBlockTime_24h: rawData.avgBlockTime_24h,
-        avgBlockTime_1h: rawData.avgBlockTime_1h,
-        avgTPS: rawData.avgTPS,
-        totalTransactionCount: rawData.totalTransactionCount,
-        nrValidators: rawData.nrValidators,
-        nrNonValidators: rawData.nrNonValidators,
-        epochInfo: rawData.epochInfo,
-        skipRate: rawData.skipRate,
-        stakeWeightedNodeVersions: rawData.stakeWeightedNodeVersions
+        apy: apyValue
       },
       timestamp: Date.now()
     }, { 
@@ -89,7 +81,7 @@ export async function GET() {
     return NextResponse.json({ 
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred',
-      data: null,
+      data: { apy: 0 },
       timestamp: Date.now()
     }, { 
       status: 500,

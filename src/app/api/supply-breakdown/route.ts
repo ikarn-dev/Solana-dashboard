@@ -1,69 +1,98 @@
 import { NextResponse } from 'next/server';
-import { SupplyBreakdown } from '@/lib/api/types';
 
-// Mock data for development/testing (values in lamports)
-const mockData: SupplyBreakdown = {
-  supply: {
-    circulating: 389418866690434750, // ~389.42M SOL
-    nonCirculating: 209902919878283050, // ~209.90M SOL
-    total: 599321786568717800 // ~599.32M SOL
-  },
-  stake: {
-    effective: 389418866690434750, // ~389.42M SOL
-    activating: 3931410430463524, // ~3.93M SOL
-    deactivating: 6603569997013932 // ~6.60M SOL
-  }
-};
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    console.log('Fetching supply breakdown data...');
-    
-    const response = await fetch('https://public-api.solanabeach.io/v2/supply-breakdown', {
+    const apiKey = process.env.SOLANA_BEACH_API_KEY;
+    const apiUrl = process.env.NEXT_PUBLIC_SOLANA_API_URL || 'https://api.solanaview.com';
+
+    if (!apiKey) {
+      return NextResponse.json({ 
+        success: false,
+        error: 'API key not configured',
+        data: null,
+        timestamp: Date.now()
+      }, { 
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store, must-revalidate',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+        }
+      });
+    }
+
+    const response = await fetch(`${apiUrl}/v2/supply-breakdown`, {
       headers: {
         'Accept': 'application/json',
-        'Cache-Control': 'no-cache'
-      }
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      cache: 'no-store'
     });
 
     if (!response.ok) {
-      console.error('API response not ok:', response.status, response.statusText);
-      return NextResponse.json({ data: mockData }, { status: 200 });
+      return NextResponse.json(
+        { 
+          success: false,
+          error: response.status === 403 ? 'API key is invalid or has insufficient permissions' : 'Failed to fetch supply breakdown',
+          data: null,
+          timestamp: Date.now()
+        },
+        { 
+          status: response.status,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+          }
+        }
+      );
     }
 
-    const rawData = await response.json();
-    console.log('Raw API response:', rawData);
+    const data = await response.json();
 
-    // Validate the data structure
-    if (!isValidSupplyData(rawData)) {
-      console.error('Invalid data structure:', rawData);
-      return NextResponse.json({ data: mockData }, { status: 200 });
-    }
-
-    return NextResponse.json({ data: rawData }, { 
+    return NextResponse.json({ 
+      success: true,
+      data,
+      timestamp: Date.now()
+    }, { 
       status: 200,
       headers: {
-        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60'
+        'Cache-Control': 'no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
       }
     });
   } catch (error) {
-    console.error('Error fetching supply data:', error);
-    return NextResponse.json({ data: mockData }, { status: 200 });
+    return NextResponse.json({ 
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      data: null,
+      timestamp: Date.now()
+    }, { 
+      status: 500,
+      headers: {
+        'Cache-Control': 'no-store, must-revalidate',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+      }
+    });
   }
 }
 
-// Helper function to validate supply data
-function isValidSupplyData(data: any): data is SupplyBreakdown {
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    typeof data.supply === 'object' &&
-    typeof data.supply.circulating === 'number' &&
-    typeof data.supply.nonCirculating === 'number' &&
-    typeof data.supply.total === 'number' &&
-    typeof data.stake === 'object' &&
-    typeof data.stake.effective === 'number' &&
-    typeof data.stake.activating === 'number' &&
-    typeof data.stake.deactivating === 'number'
-  );
+// Handle OPTIONS request for CORS
+export async function OPTIONS() {
+  return NextResponse.json({}, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+    }
+  });
 } 

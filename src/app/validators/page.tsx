@@ -27,7 +27,18 @@ export default function ValidatorsPage() {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        // Remove unused API calls
+        const response = await fetch('/api/general-info');
+        if (!response.ok) {
+          throw new Error('Failed to fetch general info');
+        }
+        const result = await response.json();
+        
+        if (result.data) {
+          setValidatorStats(prev => ({
+            ...prev,
+            nominalStakingAPY: result.data.stakingYield
+          }));
+        }
         setIsLoading(false);
       } catch (error) {
         console.error('Error fetching validators:', error);
