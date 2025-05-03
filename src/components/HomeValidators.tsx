@@ -36,7 +36,7 @@ export function HomeValidators() {
       }
       
       // Ensure we only show 10 validators
-      setValidators(response.data.slice(0, 10));
+      setValidators(response.data?.slice(0, 10) || []);
       setLastUpdated(new Date());
       setError(null);
       setRetryCount(0); // Reset retry count on success

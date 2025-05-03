@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
-import { getNetworkStatus } from '@/lib/api/solana';
 import { NetworkStatus } from '@/lib/api/types';
+
+// Add CORS headers to all responses
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
 
 // Mock data for testing
 const mockNetworkStatus: NetworkStatus = {
@@ -13,77 +19,56 @@ const mockNetworkStatus: NetworkStatus = {
   slotsPerEpoch: 432000
 };
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0; // Disable caching completely
-
 export async function GET() {
   try {
-    let data: NetworkStatus;
+    const apiUrl = process.env.NEXT_PUBLIC_SOLANA_API_URL || 'https://api.solanaview.com';
+    const apiKey = process.env.SOLANA_BEACH_API_KEY;
     
-    try {
-      // Try to fetch real data first
-      const response = await getNetworkStatus();
-      data = response.data;
-    } catch (error) {
-      // Fall back to mock data
-      data = mockNetworkStatus;
+    if (!apiKey) {
+      throw new Error('Solana Beach API key is not configured');
     }
 
-    // Compute additional fields
-    const currentSlot = data.lastNetworkSlot;
-    const currentEpoch = Math.floor(currentSlot / data.slotsPerEpoch);
-    const epochProgress = (currentSlot % data.slotsPerEpoch) / data.slotsPerEpoch;
-
-    // Update the data with computed fields
-    data = {
-      ...data,
-      currentEpoch,
-      epochProgress
+    const response = await fetch(`${apiUrl}/v1/network-status`, {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API Error Response:', errorText);
+      throw new Error(`API responded with status: ${response.status} - ${errorText}`);
+    }
+    
+    const responseData = await response.json();
+    
+    // Transform the response data to match our NetworkStatus type
+    const data: NetworkStatus = {
+      lastSyncedSlot: responseData.lastSyncedSlot,
+      lastNetworkSlot: responseData.lastNetworkSlot,
+      networkLag: responseData.networkLag,
+      laggingBehind: responseData.laggingBehind,
+      epochProgress: 0, // Calculate this if needed
+      currentEpoch: 0, // Calculate this if needed
+      slotsPerEpoch: 432000 // Standard Solana slots per epoch
     };
 
-    return NextResponse.json(
-      { 
-        success: true, 
-        data,
-        timestamp: Date.now()
-      },
-      {
-        headers: {
-          'Cache-Control': 'no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-        }
-      }
-    );
+    return NextResponse.json(data, {
+      headers: corsHeaders
+    });
   } catch (error) {
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Failed to fetch network status',
-        timestamp: Date.now()
-      },
-      { 
-        status: 500,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-        }
-      }
-    );
+    console.error('Error in network-status route:', error);
+    // Return mock data in case of error
+    return NextResponse.json(mockNetworkStatus, {
+      headers: corsHeaders
+    });
   }
 }
 
-// Handle OPTIONS request for CORS
+// Handle OPTIONS request for CORS preflight
 export async function OPTIONS() {
   return NextResponse.json({}, {
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-    }
+    headers: corsHeaders
   });
 } 
