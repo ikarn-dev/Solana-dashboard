@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { Validator, TopValidator } from '@/lib/api/types';
-import { getTopValidators } from '@/lib/api/solana';
 
 // Mock data for testing
 const mockValidators: Validator[] = [
@@ -21,15 +20,22 @@ const mockValidators: Validator[] = [
 
 export async function GET() {
   try {
-    const validators = await getTopValidators();
+    const response = await fetch('/api/proxy?endpoint=/v1/validators/top');
     
-    if (!validators.success || !validators.data) {
-      console.error('Failed to fetch validators:', validators.error);
+    if (!response.ok) {
+      console.error('Failed to fetch validators:', response.statusText);
+      return NextResponse.json(mockValidators);
+    }
+
+    const data = await response.json();
+    
+    if (!Array.isArray(data)) {
+      console.error('Invalid response format');
       return NextResponse.json(mockValidators);
     }
 
     // Transform TopValidator[] to Validator[]
-    const mappedValidators: Validator[] = validators.data.map((v: TopValidator, index: number) => ({
+    const mappedValidators: Validator[] = data.map((v: TopValidator, index: number) => ({
       votePubkey: v.votePubkey,
       name: v.moniker || 'Unnamed Validator',
       version: v.version || 'Unknown',

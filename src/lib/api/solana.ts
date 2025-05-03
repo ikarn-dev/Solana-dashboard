@@ -439,9 +439,8 @@ export async function getRecentTransactions(limit: number = 50, offset: number =
 // Get top validators
 export async function getTopValidators(): Promise<ApiResponse<TopValidator[]>> {
   try {
-    const response = await fetch(`${SOLANA_BEACH_API}/v1/validators/top`, {
+    const response = await fetch('/api/proxy?endpoint=/v1/validators/top', {
       headers: {
-        'Authorization': `Bearer ${process.env.SOLANA_BEACH_API_KEY}`,
         'Content-Type': 'application/json',
       },
     });
