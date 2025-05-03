@@ -439,16 +439,40 @@ export async function getRecentTransactions(limit: number = 50, offset: number =
 // Get top validators
 export async function getTopValidators(limit: number = 10): Promise<ApiResponse<TopValidator[]>> {
   try {
-    const response = await fetchWithCache<TopValidator[]>(
-      `/v1/validators/top`,
-      `solana:top-validators:${limit}`,
-      CACHE_TTL.MEDIUM
-    );
-    return response;
+    const response = await fetch(`/api/validators?limit=${limit}`, {
+      cache: 'no-store'
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new SolanaApiError(
+        'API_ERROR',
+        `API error: ${response.status} ${response.statusText}`,
+        errorData
+      );
+    }
+
+    const data = await response.json();
+    
+    // Validate the response data
+    if (!data || !Array.isArray(data)) {
+      throw new SolanaApiError(
+        'INVALID_DATA',
+        'Invalid response format from API',
+        data
+      );
+    }
+
+    return {
+      data,
+      timestamp: Date.now(),
+      success: true
+    };
   } catch (error) {
     console.error('Error fetching top validators:', error);
     return {
       success: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch validators',
       data: [],
       timestamp: Date.now()
     };
