@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { TopValidator } from '@/lib/api/types';
-import { ValidatorLink } from './ValidatorLink';
+import { getTopValidators } from '@/lib/api/solana';
 
 // Custom number formatter to display exact values
 const formatExactNumber = (num: number): string => {
@@ -20,47 +20,47 @@ export function HomeValidators() {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY = 5000; // 5 seconds
 
   const fetchValidators = useCallback(async () => {
     if (isRefreshing) return;
     
     setIsRefreshing(true);
     try {
-      const response = await fetch('/api/validators/top?limit=10', {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        cache: 'no-store'
-      });
+      const response = await getTopValidators();
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch validators');
+      if (!response.success) {
+        throw new Error('Failed to fetch validators');
       }
       
-      const data = await response.json();
-      
-      if (!Array.isArray(data)) {
-        throw new Error('Invalid response format');
-      }
-      
-      setValidators(data);
+      // Ensure we only show 10 validators
+      setValidators(response.data.slice(0, 10));
       setLastUpdated(new Date());
       setError(null);
+      setRetryCount(0); // Reset retry count on success
     } catch (err) {
       console.error('Error fetching validators:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch validators');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch validators';
+      setError(errorMessage);
+      
+      // Handle rate limiting with retries
+      if (errorMessage.includes('Rate limit exceeded') && retryCount < MAX_RETRIES) {
+        setRetryCount(prev => prev + 1);
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * Math.pow(2, retryCount)));
+        fetchValidators();
+      }
     } finally {
       setIsRefreshing(false);
       setLoading(false);
     }
-  }, [isRefreshing]);
+  }, [isRefreshing, retryCount]);
 
   useEffect(() => {
     fetchValidators();
-    const interval = setInterval(fetchValidators, 5 * 60 * 1000); // Refresh every 5 minutes
+    // Increase the refresh interval to reduce API calls
+    const interval = setInterval(fetchValidators, 10 * 60 * 1000); // Refresh every 10 minutes
 
     return () => clearInterval(interval);
   }, [fetchValidators]);
@@ -84,12 +84,19 @@ export function HomeValidators() {
       <div className="dashboard-card bg-white/80 backdrop-blur-lg rounded-xl p-6 shadow-lg">
         <div className="flex flex-col items-center justify-center space-y-4">
           <p className="text-red-600">Error: {error}</p>
-          <button
-            onClick={fetchValidators}
-            className="px-4 py-2 bg-lime-100 text-lime-600 rounded-lg hover:bg-lime-200 transition-colors"
-          >
-            Retry
-          </button>
+          {retryCount < MAX_RETRIES ? (
+            <p className="text-sm text-gray-500">Retrying in {Math.pow(2, retryCount) * 5} seconds...</p>
+          ) : (
+            <button
+              onClick={() => {
+                setRetryCount(0);
+                fetchValidators();
+              }}
+              className="px-4 py-2 bg-lime-100 text-lime-600 rounded-lg hover:bg-lime-200 transition-colors"
+            >
+              Retry
+            </button>
+          )}
         </div>
       </div>
     );
@@ -140,13 +147,13 @@ export function HomeValidators() {
                       {validator.pictureURL ? (
                         <img 
                           src={validator.pictureURL} 
-                          alt={validator.moniker} 
-                          className="w-6 h-6 rounded-full object-cover"
+                          alt={validator.moniker || 'Validator'} 
+                          className="w-8 h-8 rounded-full object-cover border border-lime-200"
                         />
                       ) : (
-                        <div className="w-6 h-6 rounded-full bg-lime-100 flex items-center justify-center">
-                          <span className="text-xs font-bold text-lime-600">
-                            {validator.moniker.charAt(0).toUpperCase()}
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-lime-100 to-lime-200 flex items-center justify-center border border-lime-200 overflow-hidden">
+                          <span className="text-xs font-bold text-lime-600 truncate max-w-[90%]">
+                            {(validator.moniker || validator.votePubkey.slice(0, 1)).toUpperCase()}
                           </span>
                         </div>
                       )}

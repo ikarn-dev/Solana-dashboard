@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { TopValidator } from '@/lib/api/types';
-import { ValidatorLink } from './ValidatorLink';
+import { getTopValidators } from '@/lib/api/solana';
 
 // Custom number formatter to display exact values
 const formatExactNumber = (num: number): string => {
@@ -14,56 +14,65 @@ const formatExactNumber = (num: number): string => {
   });
 };
 
+const ITEMS_PER_PAGE = 10;
+const INITIAL_LIMIT = 20; // Fetch 20 initially to have some buffer for pagination
+
 export function TopValidators() {
   const [validators, setValidators] = useState<TopValidator[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY = 5000;
 
-  const fetchValidators = useCallback(async () => {
+  const fetchValidators = async () => {
     if (isRefreshing) return;
     
     setIsRefreshing(true);
     try {
-      const response = await fetch('/api/validators/top?limit=20', {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        cache: 'no-store'
-      });
+      const response = await getTopValidators(INITIAL_LIMIT);
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch validators');
+      if (!response.success) {
+        throw new Error('Failed to fetch validators');
       }
       
-      const data = await response.json();
-      
-      if (!Array.isArray(data)) {
-        throw new Error('Invalid response format');
-      }
-      
-      setValidators(data);
+      setValidators(response.data);
       setLastUpdated(new Date());
       setError(null);
+      setRetryCount(0);
     } catch (err) {
       console.error('Error fetching validators:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch validators');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch validators';
+      setError(errorMessage);
+      
+      if (errorMessage.includes('Rate limit exceeded') && retryCount < MAX_RETRIES) {
+        setRetryCount(prev => prev + 1);
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * Math.pow(2, retryCount)));
+        fetchValidators();
+      }
     } finally {
       setIsRefreshing(false);
       setLoading(false);
     }
-  }, [isRefreshing]);
+  };
 
   useEffect(() => {
     fetchValidators();
-    const interval = setInterval(fetchValidators, 5 * 60 * 1000); // Refresh every 5 minutes
-
+    const interval = setInterval(fetchValidators, 10 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [fetchValidators]);
+  }, []);
+
+  const totalPages = Math.ceil(validators.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const currentValidators = validators.slice(startIndex, endIndex);
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
 
   if (loading) {
     return (
@@ -84,12 +93,19 @@ export function TopValidators() {
       <div className="dashboard-card bg-white/80 backdrop-blur-lg rounded-xl p-6 shadow-lg">
         <div className="flex flex-col items-center justify-center space-y-4">
           <p className="text-red-600">Error: {error}</p>
-          <button
-            onClick={fetchValidators}
-            className="px-4 py-2 bg-lime-100 text-lime-600 rounded-lg hover:bg-lime-200 transition-colors"
-          >
-            Retry
-          </button>
+          {retryCount < MAX_RETRIES ? (
+            <p className="text-sm text-gray-500">Retrying in {Math.pow(2, retryCount) * 5} seconds...</p>
+          ) : (
+            <button
+              onClick={() => {
+                setRetryCount(0);
+                fetchValidators();
+              }}
+              className="px-4 py-2 bg-lime-100 text-lime-600 rounded-lg hover:bg-lime-200 transition-colors"
+            >
+              Retry
+            </button>
+          )}
         </div>
       </div>
     );
@@ -108,11 +124,7 @@ export function TopValidators() {
             <h2 className="text-xl font-semibold text-lime-600">Top Validators</h2>
             {lastUpdated && (
               <span className="text-xs text-gray-500">
-                <ValidatorLink 
-                  votePubkey={validators[0].votePubkey} 
-                  name={validators[0].name} 
-                  className="text-sm font-medium text-gray-700"
-                />  Last updated: {lastUpdated.toLocaleTimeString()}
+                Last updated: {lastUpdated.toLocaleTimeString()}
               </span>
             )}
           </div>
@@ -131,7 +143,7 @@ export function TopValidators() {
               </tr>
             </thead>
             <tbody>
-              {validators.map((validator) => (
+              {currentValidators.map((validator) => (
                 <tr 
                   key={validator.votePubkey}
                   className="border-b border-gray-100 hover:bg-lime-50/50 transition-colors"
@@ -144,11 +156,15 @@ export function TopValidators() {
                       {validator.pictureURL ? (
                         <img 
                           src={validator.pictureURL} 
-                          alt={validator.moniker} 
-                          className="w-4 h-4 rounded-full"
+                          alt={validator.moniker || 'Validator'} 
+                          className="w-8 h-8 rounded-full object-cover border border-lime-200"
                         />
                       ) : (
-                        <div className="w-4 h-4 rounded-full bg-lime-100"></div>
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-lime-100 to-lime-200 flex items-center justify-center border border-lime-200 overflow-hidden">
+                          <span className="text-xs font-bold text-lime-600 truncate max-w-[90%]">
+                            {(validator.moniker || validator.votePubkey.slice(0, 1)).toUpperCase()}
+                          </span>
+                        </div>
                       )}
                       <span className="font-mono">
                         {validator.moniker || validator.votePubkey.slice(0, 8) + '...' + validator.votePubkey.slice(-8)}
@@ -167,6 +183,29 @@ export function TopValidators() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center space-x-2 mt-4">
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-3 py-1 rounded-lg bg-lime-100 text-lime-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-lime-200 transition-colors"
+            >
+              Previous
+            </button>
+            <span className="text-sm text-gray-600">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 rounded-lg bg-lime-100 text-lime-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-lime-200 transition-colors"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </motion.div>
     </ErrorBoundary>
   );

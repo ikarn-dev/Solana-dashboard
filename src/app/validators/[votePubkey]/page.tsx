@@ -1,240 +1,206 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
-import { getValidatorDetails } from '@/lib/api/solana';
-import { Validator } from '@/lib/api/types';
-import { getLocationFromCoordinates, LocationInfo } from '@/lib/utils/geocoding';
-import Reloading from '@/components/Reloading';
+import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { TopValidator } from '@/lib/api/types';
+import { getValidatorDetails, getValidatorMarkers } from '@/lib/api/solana';
+import { formatExactNumber } from '@/lib/utils';
 
-export default function ValidatorProfilePage() {
-  const { votePubkey } = useParams();
-  const [isLoading, setIsLoading] = useState(true);
-  const [validator, setValidator] = useState<Validator | null>(null);
+interface ValidatorDetails extends TopValidator {
+  ll: [number, number];
+}
+
+interface Marker {
+  nodeCount: number;
+  svg: {
+    x: number;
+    y: number;
+  };
+  longitude: number;
+  latitude: number;
+  pubkeys: string[];
+}
+
+export default function ValidatorProfilePage({ params }: { params: { votePubkey: string } }) {
+  const [validator, setValidator] = useState<ValidatorDetails | null>(null);
+  const [markers, setMarkers] = useState<Marker[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [locationInfo, setLocationInfo] = useState<LocationInfo | null>(null);
+  const [location, setLocation] = useState<string>('Loading...');
 
   useEffect(() => {
-    const fetchValidatorDetails = async () => {
+    const fetchData = async () => {
       try {
-        setIsLoading(true);
-        const validatorData = await getValidatorDetails(votePubkey as string);
-        setValidator(validatorData);
+        const [validatorResponse, markersResponse] = await Promise.all([
+          getValidatorDetails(params.votePubkey),
+          getValidatorMarkers()
+        ]);
 
-        // Fetch location information if coordinates are available
-        if (validatorData.ll && validatorData.ll[0] !== 0 && validatorData.ll[1] !== 0) {
-          const location = await getLocationFromCoordinates(validatorData.ll);
-          setLocationInfo(location);
+        if (!validatorResponse.success || !validatorResponse.data) {
+          throw new Error(validatorResponse.error || 'Failed to fetch validator data');
         }
-        
-        setError(null);
+
+        if (!markersResponse.success || !markersResponse.data) {
+          throw new Error(markersResponse.error || 'Failed to fetch markers data');
+        }
+
+        setValidator(validatorResponse.data);
+        setMarkers(markersResponse.data);
+
+        // Find the marker for this validator
+        const validatorMarker = markersResponse.data.find(marker => 
+          marker.pubkeys.some(pubkey => params.votePubkey.startsWith(pubkey))
+        );
+
+        if (validatorMarker) {
+          // Convert coordinates to location name
+          try {
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${validatorMarker.latitude}&lon=${validatorMarker.longitude}`
+            );
+            const data = await response.json();
+            setLocation(data.display_name || 'Unknown Location');
+          } catch (err) {
+            console.error('Error fetching location:', err);
+            setLocation('Unknown Location');
+          }
+        }
       } catch (err) {
-        setError('Failed to load validator details');
-        console.error('Error fetching validator details:', err);
+        console.error('Error:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load validator data');
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
-    if (votePubkey) {
-      fetchValidatorDetails();
-    }
-  }, [votePubkey]);
+    fetchData();
+  }, [params.votePubkey]);
 
-  if (isLoading) {
+  if (loading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-gray-100 via-purple-50 to-indigo-50 text-gray-800 relative overflow-hidden font-sans">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
-          <div className="blob w-[800px] h-[800px] rounded-[999px] absolute top-0 right-0 blur-3xl bg-opacity-60 bg-gradient-to-r from-indigo-200 via-purple-100 to-gray-200"></div>
-          <div className="blob w-[1000px] h-[1000px] rounded-[999px] absolute bottom-0 left-0 blur-3xl bg-opacity-60 bg-gradient-to-r from-gray-300 via-purple-100 to-indigo-100"></div>
+      <div className="min-h-screen bg-gradient-to-b from-lime-50 to-white p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="animate-pulse">
+            <div className="h-8 bg-lime-200/50 rounded w-1/4 mb-4"></div>
+            <div className="space-y-3">
+              <div className="h-4 bg-lime-200/50 rounded w-1/2"></div>
+              <div className="h-4 bg-lime-200/50 rounded w-1/3"></div>
+            </div>
+          </div>
         </div>
-        <div className="relative z-10 max-w-7xl mx-auto p-8">
-          <Reloading />
-        </div>
-      </main>
+      </div>
     );
   }
 
   if (error || !validator) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-gray-100 via-purple-50 to-indigo-50 text-gray-800 relative overflow-hidden font-sans">
-        <div className="relative z-10 max-w-7xl mx-auto p-8">
-          <div className="text-center text-red-500">
-            {error || 'Validator not found'}
+      <div className="min-h-screen bg-gradient-to-b from-lime-50 to-white p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white/80 backdrop-blur-lg rounded-xl p-6 shadow-lg">
+            <p className="text-red-600">Error: {error || 'Validator not found'}</p>
           </div>
         </div>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-lime-50 to-white relative overflow-hidden font-sans">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
-        <div className="blob w-[800px] h-[800px] rounded-[999px] absolute top-0 right-0 blur-3xl bg-opacity-60 bg-gradient-to-r from-lime-200 via-lime-100 to-gray-200"></div>
-        <div className="blob w-[1000px] h-[1000px] rounded-[999px] absolute bottom-0 left-0 blur-3xl bg-opacity-60 bg-gradient-to-r from-gray-300 via-lime-100 to-gray-100"></div>
-      </div>
-      
-      <div className="relative z-10 max-w-7xl mx-auto p-8">
-        <div className="flex flex-col items-center mb-12">
-          {validator.pictureURL ? (
-            <img 
-              src={validator.pictureURL} 
-              alt={validator.name}
-              className="w-32 h-32 rounded-full object-cover mb-6 shadow-lg border-4 border-lime-200"
-            />
-          ) : (
-            <div className="w-32 h-32 rounded-full bg-lime-100 flex items-center justify-center mb-6 shadow-lg border-4 border-lime-200">
-              <span className="text-5xl font-bold text-lime-600">
-                {validator.name?.charAt(0).toUpperCase() || 'V'}
-              </span>
-            </div>
-          )}
-          <a 
-            href={`https://solscan.io/account/${validator.votePubkey}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-4xl font-bold text-lime-600 text-center hover:text-lime-700 transition-colors group flex items-center gap-2"
-          >
-            {validator.name || 'Unnamed Validator'}
-            <svg className="w-5 h-5 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
-          </a>
-          <a 
-            href={`https://solscan.io/account/${validator.votePubkey}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-4 px-4 py-2 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group flex items-center gap-2"
-          >
-            <span className="text-gray-500 font-mono text-sm group-hover:text-lime-600 transition-colors">
-              {validator.votePubkey.slice(0, 4)}...{validator.votePubkey.slice(-4)}
-            </span>
-            <svg className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
-          </a>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 transform hover:scale-[1.02] transition-transform duration-300 border border-gray-100">
-            <h2 className="text-xl font-semibold text-lime-600 mb-4 flex items-center gap-2">
-              <span>Validator Details</span>
-              <div className="w-2 h-2 rounded-full bg-lime-400 animate-pulse"></div>
-            </h2>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-                <span className="text-gray-500">Version</span>
-                <span className="font-medium bg-lime-50 px-3 py-1 rounded-full text-lime-700">
-                  {validator.version || 'Unknown'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-                <span className="text-gray-500">Commission</span>
-                <span className="font-medium bg-lime-50 px-3 py-1 rounded-full text-lime-700">
-                  {typeof validator.commission === 'number' ? `${validator.commission}%` : 'Unknown'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-                <span className="text-gray-500">Activated Stake</span>
-                <span className="font-medium bg-lime-50 px-3 py-1 rounded-full text-lime-700">
-                  {typeof validator.activatedStake === 'number' && validator.activatedStake > 0 
-                    ? `${(validator.activatedStake / 1e9).toFixed(2)} SOL` 
-                    : 'Unknown'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-                <span className="text-gray-500">Skip Rate</span>
-                <span className="font-medium bg-lime-50 px-3 py-1 rounded-full text-lime-700">
-                  {typeof validator.skipRate === 'number' ? `${validator.skipRate}%` : 'Unknown'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-500">Last Vote</span>
-                <span className="font-medium bg-lime-50 px-3 py-1 rounded-full text-lime-700">
-                  {typeof validator.lastVote === 'number' && validator.lastVote > 0 
-                    ? new Date(validator.lastVote * 1000).toLocaleString() 
-                    : 'Unknown'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 transform hover:scale-[1.02] transition-transform duration-300 border border-gray-100">
-            <h2 className="text-xl font-semibold text-lime-600 mb-4 flex items-center gap-2">
-              <span>Location</span>
-              <div className="w-2 h-2 rounded-full bg-lime-400 animate-pulse"></div>
-            </h2>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-                <span className="text-gray-500">Coordinates</span>
-                <span className="font-medium bg-lime-50 px-3 py-1 rounded-full text-lime-700">
-                  {validator.ll && validator.ll[0] !== 0 && validator.ll[1] !== 0 
-                    ? `${validator.ll[0]}, ${validator.ll[1]}`
-                    : 'Unknown'}
-                </span>
-              </div>
-              {locationInfo && (
-                <>
-                  <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-                    <span className="text-gray-500">Location</span>
-                    <span className="font-medium bg-lime-50 px-3 py-1 rounded-full text-lime-700">
-                      {locationInfo.placeName}
-                    </span>
-                  </div>
-                  {locationInfo.address && (
-                    <div className="space-y-2 pt-3">
-                      {locationInfo.address.city && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-500">City</span>
-                          <span className="font-medium bg-lime-50 px-3 py-1 rounded-full text-lime-700">
-                            {locationInfo.address.city}
-                          </span>
-                        </div>
-                      )}
-                      {locationInfo.address.state && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-500">State</span>
-                          <span className="font-medium bg-lime-50 px-3 py-1 rounded-full text-lime-700">
-                            {locationInfo.address.state}
-                          </span>
-                        </div>
-                      )}
-                      {locationInfo.address.country && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-500">Country</span>
-                          <span className="font-medium bg-lime-50 px-3 py-1 rounded-full text-lime-700">
-                            {locationInfo.address.country}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </>
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gradient-to-b from-lime-50 to-white p-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="max-w-4xl mx-auto"
+        >
+          <div className="bg-white/80 backdrop-blur-lg rounded-xl p-6 shadow-lg">
+            <div className="flex items-center space-x-4 mb-6">
+              {validator.pictureURL ? (
+                <img 
+                  src={validator.pictureURL} 
+                  alt={validator.moniker || 'Validator'} 
+                  className="w-16 h-16 rounded-full object-cover border border-lime-200"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-lime-100 to-lime-200 flex items-center justify-center border border-lime-200 overflow-hidden">
+                  <span className="text-xl font-bold text-lime-600">
+                    {(validator.moniker || validator.votePubkey.slice(0, 1)).toUpperCase()}
+                  </span>
+                </div>
               )}
+              <div>
+                <h1 className="text-2xl font-bold text-lime-600">
+                  {validator.moniker || 'Unknown Validator'}
+                </h1>
+                <p className="text-gray-500 font-mono text-sm">
+                  {validator.votePubkey}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="bg-lime-50/50 rounded-lg p-4">
+                  <h3 className="text-sm font-semibold text-lime-600 mb-2">Stake Information</h3>
+                  <div className="space-y-2">
+                    <p className="flex justify-between">
+                      <span className="text-gray-600">Total Stake:</span>
+                      <span className="font-mono">{formatExactNumber(validator.activatedStake)} SOL</span>
+                    </p>
+                    <p className="flex justify-between">
+                      <span className="text-gray-600">Delegators:</span>
+                      <span className="font-mono">{formatExactNumber(validator.delegatorCount)}</span>
+                    </p>
+                    <p className="flex justify-between">
+                      <span className="text-gray-600">Commission:</span>
+                      <span className="font-mono">{validator.commission}%</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-lime-50/50 rounded-lg p-4">
+                  <h3 className="text-sm font-semibold text-lime-600 mb-2">Node Information</h3>
+                  <div className="space-y-2">
+                    <p className="flex justify-between">
+                      <span className="text-gray-600">Version:</span>
+                      <span className="font-mono">{validator.version}</span>
+                    </p>
+                    <p className="flex justify-between">
+                      <span className="text-gray-600">Last Vote:</span>
+                      <span className="font-mono">
+                        {new Date(validator.lastVote * 1000).toLocaleString()}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-lime-50/50 rounded-lg p-4">
+                  <h3 className="text-sm font-semibold text-lime-600 mb-2">Location</h3>
+                  <div className="space-y-2">
+                    <p className="text-gray-600">{location}</p>
+                    {validator.ll && (
+                      <div className="mt-2">
+                        <iframe
+                          width="100%"
+                          height="200"
+                          frameBorder="0"
+                          scrolling="no"
+                          marginHeight={0}
+                          marginWidth={0}
+                          src={`https://www.openstreetmap.org/export/embed.html?bbox=${validator.ll[1]-0.1},${validator.ll[0]-0.1},${validator.ll[1]+0.1},${validator.ll[0]+0.1}&layer=mapnik&marker=${validator.ll[0]},${validator.ll[1]}`}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 transform hover:scale-[1.02] transition-transform duration-300 border border-gray-100">
-          <h2 className="text-xl font-semibold text-lime-600 mb-4 flex items-center gap-2">
-            <span>Vote Public Key</span>
-            <div className="w-2 h-2 rounded-full bg-lime-400 animate-pulse"></div>
-          </h2>
-          <div className="bg-gray-50 rounded-lg p-4">
-            <a 
-              href={`https://solscan.io/account/${validator.votePubkey}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm font-mono break-all hover:text-lime-600 transition-colors group flex items-center gap-2"
-            >
-              {validator.votePubkey}
-              <svg className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-            </a>
-          </div>
-        </div>
+        </motion.div>
       </div>
-    </main>
+    </ErrorBoundary>
   );
 } 

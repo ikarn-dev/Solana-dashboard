@@ -1,15 +1,18 @@
-import { NetworkStatus, SupplyBreakdown, ApiResponse, TPSData, MarketData, RecentBlocksResponse, RecentTransactionsResponse, Validator, GeneralInfo, TopValidator } from './types';
+import { NetworkStatus, SupplyBreakdown, ApiResponse, TPSData, MarketData, RecentBlocksResponse, RecentTransactionsResponse, Validator, GeneralInfo, TopValidator, ValidatorDetails, Marker } from './types';
 import { getCachedData, setCachedData, CACHE_TTL } from '../cache';
 
 // Base URL for Solana Beach API
-export const SOLANA_BEACH_API = process.env.NEXT_PUBLIC_SOLANA_API_URL || 'https://public-api.solanabeach.io';
+export const SOLANA_BEACH_API = process.env.NEXT_PUBLIC_SOLANA_API_URL || 'https://api.solanaview.com';
 const API_KEY = process.env.SOLANA_BEACH_API_KEY;
 
+// Base URL for SolanaView API
+export const SOLANA_VIEW_API = 'https://api.solanaview.com/v1';
+
 // Rate limiting configuration
-const RATE_LIMIT_REQUESTS = parseInt(process.env.RATE_LIMIT_REQUESTS || '50', 10);
-const RATE_LIMIT_WINDOW = parseInt(process.env.RATE_LIMIT_WINDOW || '60', 10); // 60 seconds
+const RATE_LIMIT_REQUESTS = parseInt(process.env.RATE_LIMIT_REQUESTS || '20', 10);
+const RATE_LIMIT_WINDOW = parseInt(process.env.RATE_LIMIT_WINDOW || '120', 10); // 120 seconds
 const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000; // 1 second
+const RETRY_DELAY = 2000; // 2 seconds
 
 // Common headers for API requests
 const headers = {
@@ -62,29 +65,29 @@ async function fetchWithCache<T>(
   let retries = 0;
   
   while (retries < MAX_RETRIES) {
-  try {
-    // Check rate limit
-    if (!checkRateLimit(endpoint)) {
-      throw new SolanaApiError(
-        'RATE_LIMIT_EXCEEDED',
-        'Rate limit exceeded. Please try again later.'
-      );
-    }
+    try {
+      // Check rate limit
+      if (!checkRateLimit(endpoint)) {
+        throw new SolanaApiError(
+          'RATE_LIMIT_EXCEEDED',
+          'Rate limit exceeded. Please try again later.'
+        );
+      }
 
-    // Check cache first
-    const cachedData = await getCachedData<ApiResponse<T>>(cacheKey);
-    if (cachedData) {
-      return cachedData;
-    }
+      // Check cache first
+      const cachedData = await getCachedData<ApiResponse<T>>(cacheKey);
+      if (cachedData) {
+        return cachedData;
+      }
 
-    // Use proxy for all external API calls
-    const response = await fetch(`/api/proxy?endpoint=${endpoint}`, {
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      cache: 'no-store'
-    });
+      // Use proxy for all external API calls
+      const response = await fetch(`/api/proxy?endpoint=${endpoint}`, {
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        cache: 'no-store'
+      });
       
       if (response.status === 429) {
         // Rate limit hit, wait and retry
@@ -93,26 +96,26 @@ async function fetchWithCache<T>(
         continue;
       }
     
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new SolanaApiError(
-        'API_ERROR',
-        `API error: ${response.status} ${response.statusText}`,
-        errorData
-      );
-    }
-    
-    const data = await response.json();
-    const apiResponse: ApiResponse<T> = {
-      data,
-      timestamp: Date.now(),
-      success: true
-    };
-    
-    // Cache the response
-    await setCachedData(cacheKey, apiResponse, ttl);
-    return apiResponse;
-  } catch (error) {
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new SolanaApiError(
+          'API_ERROR',
+          `API error: ${response.status} ${response.statusText}`,
+          errorData
+        );
+      }
+      
+      const data = await response.json();
+      const apiResponse: ApiResponse<T> = {
+        data,
+        timestamp: Date.now(),
+        success: true
+      };
+      
+      // Cache the response
+      await setCachedData(cacheKey, apiResponse, ttl);
+      return apiResponse;
+    } catch (error) {
       if (retries < MAX_RETRIES - 1) {
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * Math.pow(2, retries)));
         retries++;
@@ -433,71 +436,22 @@ export async function getRecentTransactions(limit: number = 50, offset: number =
   }
 }
 
-// Get Top Validators
-export async function getTopValidators(offset: number = 0): Promise<ApiResponse<TopValidator[]>> {
+// Get top validators
+export async function getTopValidators(limit: number = 10): Promise<ApiResponse<TopValidator[]>> {
   try {
-    if (!API_KEY) {
-      throw new SolanaApiError(
-        'API_KEY_MISSING',
-        'Solana Beach API key is required'
-      );
-    }
-
-    const response = await fetch(`/api/proxy?endpoint=/v1/validators/top&offset=${offset}`, {
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      cache: 'no-store'
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new SolanaApiError(
-        'API_ERROR',
-        `API error: ${response.status} ${response.statusText}`,
-        errorData
-      );
-    }
-
-    const data = await response.json();
-    
-    // Validate the response data
-    if (!data || !Array.isArray(data)) {
-      throw new SolanaApiError(
-        'INVALID_DATA',
-        'Invalid response format from API',
-        data
-      );
-    }
-
-    // Transform the data to match TopValidator type
-    const transformedData = data.map(validator => ({
-      votePubkey: validator.votePubkey,
-      moniker: validator.moniker || validator.name || 'Unnamed Validator',
-      version: validator.version || 'Unknown',
-      commission: validator.commission || 0,
-      activatedStake: validator.activatedStake || 0,
-      delegatorCount: validator.delegatorCount || 0,
-      lastVote: validator.lastVote || Math.floor(Date.now() / 1000),
-      ll: validator.ll || [0, 0],
-      pictureURL: validator.pictureURL || ''
-    }));
-
-    return {
-      data: transformedData,
-      timestamp: Date.now(),
-      success: true
-    };
-  } catch (error) {
-    if (error instanceof SolanaApiError) {
-      throw error;
-    }
-    throw new SolanaApiError(
-      'FETCH_ERROR',
-      'Failed to fetch validators',
-      error
+    const response = await fetchWithCache<TopValidator[]>(
+      `/v1/validators/top`,
+      `solana:top-validators:${limit}`,
+      CACHE_TTL.MEDIUM
     );
+    return response;
+  } catch (error) {
+    console.error('Error fetching top validators:', error);
+    return {
+      success: false,
+      data: [],
+      timestamp: Date.now()
+    };
   }
 }
 
@@ -556,138 +510,84 @@ export async function getGeneralInfo(): Promise<ApiResponse<GeneralInfo>> {
   }
 }
 
-export async function getValidatorDetails(votePubkey: string): Promise<Validator> {
+export async function getValidatorDetails(votePubkey: string): Promise<ApiResponse<ValidatorDetails>> {
   try {
-    if (!API_KEY) {
-      throw new SolanaApiError(
-        'API_KEY_MISSING',
-        'Solana Beach API key is required'
-      );
-    }
+    const response = await fetchWithCache<ValidatorDetails[]>(
+      `/v1/validators/all`,
+      `solana:validator:${votePubkey}`,
+      CACHE_TTL.MEDIUM
+    );
 
-    // First try to get the validator directly from the top validators list
-    const response = await fetch(`/api/proxy?endpoint=/v1/validators/top&limit=200`, {
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      cache: 'no-store'
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new SolanaApiError(
-        'API_ERROR',
-        `API error: ${response.status} ${response.statusText}`,
-        errorData
-      );
-    }
-
-    const validators = await response.json();
-    
-    // Validate the response data
-    if (!validators || !Array.isArray(validators)) {
-      throw new SolanaApiError(
-        'INVALID_DATA',
-        'Invalid response format from API',
-        validators
-      );
-    }
-
-    // Find the specific validator
-    const validator = validators.find((v: any) => v.votePubkey === votePubkey);
-    
-    if (!validator) {
-      // If not found in top 200, make a direct API call through proxy
-      const directResponse = await fetch(`/api/proxy?endpoint=/v1/validators/top&limit=1&votePubkey=${votePubkey}`, {
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        cache: 'no-store'
-      });
-
-      if (!directResponse.ok) {
-        // Return a default validator object if not found
-        return {
-          votePubkey: votePubkey,
-          name: 'Unknown Validator',
-          version: 'Unknown',
-          activatedStake: 0,
-          commission: 0,
-          skipRate: 0,
-          lastVote: Math.floor(Date.now() / 1000),
-          voteDistance: 0,
-          ll: [0, 0],
-          pictureURL: '',
-          rank: undefined,
-          website: undefined
-        };
-      }
-
-      const directData = await directResponse.json();
-      const directValidator = Array.isArray(directData) ? directData[0] : directData;
-
-      if (!directValidator) {
-        // Return a default validator object if not found
-        return {
-          votePubkey: votePubkey,
-          name: 'Unknown Validator',
-          version: 'Unknown',
-          activatedStake: 0,
-          commission: 0,
-          skipRate: 0,
-          lastVote: Math.floor(Date.now() / 1000),
-          voteDistance: 0,
-          ll: [0, 0],
-          pictureURL: '',
-          rank: undefined,
-          website: undefined
-        };
-      }
-
-      // Transform the direct API response to Validator type
+    if (!response.success || !response.data) {
       return {
-        votePubkey: directValidator.votePubkey,
-        name: directValidator.moniker || directValidator.name || 'Unnamed Validator',
-        version: directValidator.version || 'Unknown',
-        activatedStake: typeof directValidator.activatedStake === 'number' ? directValidator.activatedStake : 0,
-        commission: typeof directValidator.commission === 'number' ? directValidator.commission : 0,
-        skipRate: typeof directValidator.skipRate === 'number' ? directValidator.skipRate : 0,
-        lastVote: typeof directValidator.lastVote === 'number' ? directValidator.lastVote : Math.floor(Date.now() / 1000),
-        voteDistance: typeof directValidator.voteDistance === 'number' ? directValidator.voteDistance : 0,
-        ll: directValidator.ll || [0, 0],
-        pictureURL: directValidator.pictureURL || '',
-        rank: undefined,
-        website: directValidator.website || undefined
+        success: false,
+        error: response.error || 'Failed to fetch validator details',
+        timestamp: Date.now()
       };
     }
 
-    // Transform the data to match Validator type
-    const transformedValidator: Validator = {
-      votePubkey: validator.votePubkey,
-      name: validator.moniker || validator.name || 'Unnamed Validator',
-      version: validator.version || 'Unknown',
-      activatedStake: typeof validator.activatedStake === 'number' ? validator.activatedStake : 0,
-      commission: typeof validator.commission === 'number' ? validator.commission : 0,
-      skipRate: typeof validator.skipRate === 'number' ? validator.skipRate : 0,
-      lastVote: typeof validator.lastVote === 'number' ? validator.lastVote : Math.floor(Date.now() / 1000),
-      voteDistance: typeof validator.voteDistance === 'number' ? validator.voteDistance : 0,
-      ll: validator.ll || [0, 0],
-      pictureURL: validator.pictureURL || '',
-      rank: validators.indexOf(validator) + 1,
-      website: validator.website || undefined
-    };
-
-    return transformedValidator;
-  } catch (error) {
-    if (error instanceof SolanaApiError) {
-      throw error;
+    // Find the specific validator in the response
+    const validator = response.data.find((v: ValidatorDetails) => v.votePubkey === votePubkey);
+    if (!validator) {
+      return {
+        success: false,
+        error: 'Validator not found',
+        timestamp: Date.now()
+      };
     }
-    throw new SolanaApiError(
-      'FETCH_ERROR',
-      'Failed to fetch validator details',
-      error
+
+    return {
+      success: true,
+      data: validator,
+      timestamp: Date.now()
+    };
+  } catch (error) {
+    console.error('Error fetching validator details:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch validator details',
+      timestamp: Date.now()
+    };
+  }
+}
+
+export async function getValidatorMarkers(): Promise<ApiResponse<Marker[]>> {
+  try {
+    const response = await fetchWithCache<Marker[]>(
+      `/v1/markers`,
+      'solana:markers',
+      CACHE_TTL.MEDIUM
     );
+
+    return {
+      ...response,
+      timestamp: Date.now()
+    };
+  } catch (error) {
+    console.error('Error fetching validator markers:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch validator markers',
+      timestamp: Date.now()
+    };
+  }
+}
+
+// Get all validators
+export async function getAllValidators(): Promise<ApiResponse<Validator[]>> {
+  try {
+    const response = await fetchWithCache<Validator[]>(
+      '/validators/all',
+      'solana:all-validators',
+      CACHE_TTL.MEDIUM
+    );
+    return response;
+  } catch (error) {
+    console.error('Error fetching all validators:', error);
+    return {
+      success: false,
+      data: [],
+      timestamp: Date.now()
+    };
   }
 }

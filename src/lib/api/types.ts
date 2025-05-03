@@ -1,8 +1,9 @@
 // API Response Types
 export interface ApiResponse<T> {
-  data: T;
-  timestamp: number;
   success: boolean;
+  data?: T;
+  error?: string;
+  timestamp: number;
 }
 
 // Network Status Types
@@ -86,6 +87,13 @@ export interface Validator {
   pictureURL: string;
   rank?: number;
   website?: string;
+  delegatorCount?: number;
+  epochCredits?: number;
+  epochVoteAccount?: boolean;
+  identity?: string;
+  rootSlot?: number;
+  credits?: number;
+  epoch?: number;
 }
 
 // General Info Types
@@ -225,5 +233,20 @@ export interface RecentTransactionsResponse {
     offset: number;
     limit: number;
   };
+}
+
+export interface ValidatorDetails extends TopValidator {
+  ll: [number, number];
+}
+
+export interface Marker {
+  nodeCount: number;
+  svg: {
+    x: number;
+    y: number;
+  };
+  longitude: number;
+  latitude: number;
+  pubkeys: string[];
 }
 
