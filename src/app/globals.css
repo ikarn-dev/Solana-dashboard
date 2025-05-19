@@ -364,7 +364,7 @@ p {
 
 .hover\:bg-accent:hover {
   background-color: var(--accent-hover);
-}
+} 
 
 @keyframes priceUpdate {
   0% {

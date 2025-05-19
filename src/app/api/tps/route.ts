@@ -44,22 +44,22 @@ export async function GET() {
     if (!response.ok) {
       console.error('API response not ok:', response.status, response.statusText);
       
-      return NextResponse.json(
+        return NextResponse.json(
         { 
           success: false,
           error: response.status === 403 ? 'API key is invalid or has insufficient permissions' : 'Failed to fetch TPS data',
           data: mockData,
           timestamp: Date.now()
         },
-        { 
+          { 
           status: response.status,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+            headers: {
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'GET, OPTIONS',
+              'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+            }
           }
-        }
-      );
+        );
     }
 
     const rawData = await response.json();

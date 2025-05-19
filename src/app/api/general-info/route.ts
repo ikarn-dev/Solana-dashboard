@@ -25,11 +25,11 @@ export async function GET() {
     }
 
     const response = await fetch(`${apiUrl}/v1/general-info`, {
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      cache: 'no-store'
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        cache: 'no-store'
     });
 
     if (!response.ok) {

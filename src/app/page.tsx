@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { Menu, ArrowUp } from 'lucide-react';
-import NetworkStatus from '@/components/NetworkStatus';
 import { StakingDetails } from '@/components/StakingDetails';
 import TPSDisplay from '@/components/TPSDisplay';
 import MarketDataCard from '@/components/MarketData';
@@ -71,11 +70,6 @@ export default function Home() {
         <div className="mb-8">
           <HomeValidators />
         </div>
-
-        {/* Network Status */}
-        <div className="mb-8">
-          <NetworkStatus />
-        </div>
         
         {/* TPS Display */}
         <div className="mb-8">
@@ -101,8 +95,9 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
             onClick={scrollToTop}
-            className="fixed bottom-8 right-8 p-3 rounded-full bg-lime-500 text-white shadow-lg hover:bg-lime-600 transition-colors duration-200 z-50"
+            className="fixed bottom-8 right-8 p-3 bg-lime-500 text-white rounded-full shadow-lg hover:bg-lime-600 transition-colors duration-200 z-50 focus:outline-none focus:ring-2 focus:ring-lime-500 focus:ring-offset-2"
             aria-label="Scroll to top"
+            title="Scroll to top"
           >
             <ArrowUp className="w-6 h-6" />
           </motion.button>

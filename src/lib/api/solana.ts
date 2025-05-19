@@ -131,45 +131,6 @@ async function fetchWithCache<T>(
   );
 }
 
-// Network Status
-export async function getNetworkStatus(): Promise<ApiResponse<NetworkStatus>> {
-  try {
-    // Direct fetch without caching for network status to ensure fresh data
-    const response = await fetch(`${SOLANA_BEACH_API}/v1/network-status`, { 
-      headers,
-      cache: 'no-store'
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new SolanaApiError(
-        'API_ERROR',
-        `API error: ${response.status} ${response.statusText}`,
-        errorData
-      );
-    }
-    
-    const data = await response.json();
-    
-    const apiResponse: ApiResponse<NetworkStatus> = {
-      data,
-      timestamp: Date.now(),
-      success: true
-    };
-    
-    return apiResponse;
-  } catch (error) {
-    if (error instanceof SolanaApiError) {
-      throw error;
-    }
-    throw new SolanaApiError(
-      'FETCH_ERROR',
-      error instanceof Error ? error.message : 'Unknown error occurred',
-      error
-    );
-  }
-}
-
 // Supply Breakdown
 export async function getSupplyBreakdown(): Promise<ApiResponse<SupplyBreakdown>> {
   try {
@@ -437,9 +398,9 @@ export async function getRecentTransactions(limit: number = 50, offset: number =
 }
 
 // Get top validators
-export async function getTopValidators(limit: number = 10): Promise<ApiResponse<TopValidator[]>> {
+export async function getTopValidators(limit: number = 10, offset: number = 0): Promise<ApiResponse<TopValidator[]>> {
   try {
-    const response = await fetch(`/api/validators?limit=${limit}`, {
+    const response = await fetch(`/api/validators?limit=${limit}&offset=${offset}`, {
       cache: 'no-store'
     });
 
@@ -453,9 +414,10 @@ export async function getTopValidators(limit: number = 10): Promise<ApiResponse<
     }
 
     const data = await response.json();
+    console.log('Received data in getTopValidators:', JSON.stringify(data, null, 2));
     
-    // Validate the response data
-    if (!data || !Array.isArray(data)) {
+    if (!data || !data.validators) {
+      console.error('Invalid data format:', data);
       throw new SolanaApiError(
         'INVALID_DATA',
         'Invalid response format from API',
@@ -463,10 +425,29 @@ export async function getTopValidators(limit: number = 10): Promise<ApiResponse<
       );
     }
 
+    // Transform the data to match TopValidator interface
+    const validators = data.validators.map((validator: any) => ({
+      votePubkey: validator.votePubkey,
+      name: validator.name,
+      version: validator.version,
+      activatedStake: Number(validator.activatedStake) || 0,
+      commission: Number(validator.commission) || 0,
+      lastVote: Number(validator.lastVote) || 0,
+      pictureURL: validator.pictureURL || '',
+      delegatorCount: Number(validator.delegatorCount) || 0,
+      delinquent: validator.delinquent || false,
+      ll: [0, 0] // Default value since it's not in the API response
+    }));
+
     return {
-      data,
+      data: validators,
       timestamp: Date.now(),
-      success: true
+      success: true,
+      pagination: data.pagination || {
+        total: validators.length,
+        offset: offset,
+        limit: limit
+      }
     };
   } catch (error) {
     console.error('Error fetching top validators:', error);
@@ -536,22 +517,27 @@ export async function getGeneralInfo(): Promise<ApiResponse<GeneralInfo>> {
 
 export async function getValidatorDetails(votePubkey: string): Promise<ApiResponse<ValidatorDetails>> {
   try {
-    const response = await fetchWithCache<ValidatorDetails[]>(
-      `/v1/validators/all`,
-      `solana:validator:${votePubkey}`,
-      CACHE_TTL.MEDIUM
-    );
+    const response = await fetch(`/api/proxy?endpoint=/v2/validator-list?limit=100&offset=0`, {
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      cache: 'no-store'
+    });
 
-    if (!response.success || !response.data) {
-      return {
-        success: false,
-        error: response.error || 'Failed to fetch validator details',
-        timestamp: Date.now()
-      };
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new SolanaApiError(
+        'API_ERROR',
+        `API error: ${response.status} ${response.statusText}`,
+        errorData
+      );
     }
 
+    const data = await response.json();
+    
     // Find the specific validator in the response
-    const validator = response.data.find((v: ValidatorDetails) => v.votePubkey === votePubkey);
+    const validator = data.validatorList.find((v: any) => v.votePubkey === votePubkey);
     if (!validator) {
       return {
         success: false,
@@ -560,9 +546,25 @@ export async function getValidatorDetails(votePubkey: string): Promise<ApiRespon
       };
     }
 
+    // Transform the validator data
+    const transformedValidator: ValidatorDetails = {
+      votePubkey: validator.votePubkey,
+      name: validator.name,
+      version: validator.version,
+      activatedStake: validator.activatedStake,
+      commission: validator.commission,
+      lastVote: validator.lastVote,
+      pictureURL: validator.iconUrl,
+      delegatorCount: validator.stakeAccounts,
+      delinquent: validator.delinquent,
+      ll: [0, 0], // Default value since it's not in the API response
+      skipRate: validator.skipRate || 0,
+      uptime: validator.uptime || 100
+    };
+
     return {
       success: true,
-      data: validator,
+      data: transformedValidator,
       timestamp: Date.now()
     };
   } catch (error) {

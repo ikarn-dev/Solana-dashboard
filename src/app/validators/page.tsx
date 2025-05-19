@@ -1,92 +1,161 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Reloading from '@/components/Reloading';
-import { ValidatorStats } from '@/components/ValidatorStats';
-import { TopValidators } from '@/components/TopValidators';
+import { useEffect, useState } from 'react';
+import { getTopValidators } from '@/lib/api/solana';
+import { TopValidator } from '@/lib/api/types';
+import { Pagination } from '@/components/ui/Pagination';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { ErrorMessage } from '@/components/ui/ErrorMessage';
+import Link from 'next/link';
+
+const ITEMS_PER_PAGE = 10;
+const TOTAL_VALIDATORS = 100;
 
 export default function ValidatorsPage() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [validatorStats, setValidatorStats] = useState({
-    totalValidators: 1314,
-    superminority: 20,
-    skipRate: 0.26,
-    weightedSkipRate: 0.26,
-    nominalStakingAPY: 7.11,
-    nodeVersions: [
-      { version: '2.1.20', percentage: 39.9 },
-      { version: '2.1.21', percentage: 36.0 },
-      { version: '2.2.12', percentage: 8.6 },
-      { version: '2.2.7', percentage: 6.1 },
-      { version: 'others', percentage: 5.2 },
-      { version: '0.411.20121', percentage: 4.2 }
-    ]
-  });
+  const [validators, setValidators] = useState<TopValidator[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(Math.ceil(TOTAL_VALIDATORS / ITEMS_PER_PAGE));
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchValidators = async () => {
       try {
-        setIsLoading(true);
-        const response = await fetch('/api/general-info');
-        if (!response.ok) {
-          throw new Error('Failed to fetch general info');
-        }
-        const result = await response.json();
+        setLoading(true);
+        setError(null);
+        const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+        const response = await getTopValidators(ITEMS_PER_PAGE, offset);
         
-        if (result.data) {
-          setValidatorStats(prev => ({
-            ...prev,
-            nominalStakingAPY: result.data.stakingYield
-          }));
+        if (response.success && response.data) {
+          setValidators(response.data);
+          setTotalPages(Math.ceil(TOTAL_VALIDATORS / ITEMS_PER_PAGE));
+        } else {
+          setError(response.error || 'Failed to fetch validators');
         }
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error fetching validators:', error);
-        setIsLoading(false);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchData();
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    fetchValidators();
+  }, [currentPage]);
 
-  if (isLoading) {
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  if (loading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-gray-100 via-purple-50 to-indigo-50 text-gray-800 relative overflow-hidden font-sans">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
-          <div className="blob w-[800px] h-[800px] rounded-[999px] absolute top-0 right-0 blur-3xl bg-opacity-60 bg-gradient-to-r from-indigo-200 via-purple-100 to-gray-200"></div>
-          <div className="blob w-[1000px] h-[1000px] rounded-[999px] absolute bottom-0 left-0 blur-3xl bg-opacity-60 bg-gradient-to-r from-gray-300 via-purple-100 to-indigo-100"></div>
-        </div>
-        <div className="relative z-10 max-w-7xl mx-auto p-8">
-          <Reloading />
-        </div>
-      </main>
+      <div className="flex justify-center items-center min-h-screen">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <ErrorMessage message={error} />
+      </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-lime-50 to-white relative overflow-hidden font-sans">
-      <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
-        <div className="blob w-[800px] h-[800px] rounded-[999px] absolute top-0 right-0 blur-3xl bg-opacity-60 bg-gradient-to-r from-lime-200 via-lime-100 to-gray-200"></div>
-        <div className="blob w-[1000px] h-[1000px] rounded-[999px] absolute bottom-0 left-0 blur-3xl bg-opacity-60 bg-gradient-to-r from-gray-300 via-lime-100 to-gray-100"></div>
-        <div className="blob w-[600px] h-[600px] rounded-[999px] absolute bottom-0 left-0 blur-3xl bg-opacity-60 bg-gradient-to-r from-gray-200 via-lime-100 to-gray-100"></div>
-        <div className="blob w-[300px] h-[300px] rounded-[999px] absolute bottom-[-10px] left-0 blur-3xl bg-opacity-60 bg-gradient-to-r from-lime-300 via-lime-200 to-gray-300"></div>
-      </div>
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-8">Validators</h1>
       
-      <div className="relative z-10 max-w-7xl mx-auto p-8">
-        <header className="mb-8">
-          <h1 className="text-3xl text-lime-600 font-semibold text-center">Validators Overview</h1>
-        </header>
-
-        <div className="mb-8">
-          <ValidatorStats {...validatorStats} />
-        </div>
-
-        <div className="mb-8">
-          <TopValidators />
-        </div>
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Validator
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Version
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Stake
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Commission
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Delegators
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Status
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {validators.map((validator) => (
+              <tr key={validator.votePubkey} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <Link href={`/validators/${validator.votePubkey}`} className="flex items-center space-x-3">
+                    {validator.pictureURL ? (
+                      <img
+                        src={validator.pictureURL}
+                        alt={validator.name || validator.votePubkey.slice(0, 4)}
+                        className="w-8 h-8 rounded-full"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                        <span className="text-gray-500 text-sm">
+                          {(validator.name || validator.votePubkey.slice(0, 4)).charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {validator.name || validator.votePubkey.slice(0, 4)}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {validator.votePubkey.slice(0, 8)}...
+                      </div>
+                    </div>
+                  </Link>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {validator.version || 'Unknown'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {(Number(validator.activatedStake) / 1e9).toFixed(2)} SOL
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {validator.commission}%
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {validator.delegatorCount}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {validator.delinquent ? (
+                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                      Delinquent
+                    </span>
+                  ) : (
+                    <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                      Active
+                    </span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-    </main>
+
+      {totalPages > 1 && (
+        <div className="mt-8 flex justify-center">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
+        </div>
+      )}
+    </div>
   );
 } 

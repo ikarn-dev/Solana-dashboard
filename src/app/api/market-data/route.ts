@@ -20,7 +20,7 @@ async function fetchMarketData() {
       },
       cache: 'no-store'
     });
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error('API Error Response:', {
@@ -30,7 +30,7 @@ async function fetchMarketData() {
       });
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
+
     const data = await response.json();
     console.log('Raw API response:', data);
     

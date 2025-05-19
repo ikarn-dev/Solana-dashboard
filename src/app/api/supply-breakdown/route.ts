@@ -23,7 +23,7 @@ export async function GET() {
         }
       });
     }
-
+    
     const response = await fetch(`${apiUrl}/v2/supply-breakdown`, {
       headers: {
         'Accept': 'application/json',

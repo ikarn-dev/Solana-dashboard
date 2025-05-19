@@ -1,9 +1,16 @@
 // API Response Types
+export interface PaginationInfo {
+  total: number;
+  offset: number;
+  limit: number;
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
   error?: string;
   timestamp: number;
+  pagination?: PaginationInfo;
 }
 
 // Network Status Types
@@ -164,15 +171,21 @@ export interface RecentBlocksResponse {
 
 // Top Validator Types
 export interface TopValidator {
-  activatedStake: number;
-  commission: number;
   votePubkey: string;
-  delegatorCount: number;
-  ll: [number, number];
-  moniker: string;
+  name: string;
   version: string;
+  activatedStake: string | number;
+  commission: number;
   lastVote: number;
-  pictureURL: string;
+  pictureURL?: string;
+  delegatorCount: number;
+  delinquent: boolean;
+  ll: [number, number];
+}
+
+export interface ValidatorDetails extends TopValidator {
+  skipRate?: number;
+  uptime?: number;
 }
 
 // Recent Transaction Types
@@ -233,10 +246,6 @@ export interface RecentTransactionsResponse {
     offset: number;
     limit: number;
   };
-}
-
-export interface ValidatorDetails extends TopValidator {
-  ll: [number, number];
 }
 
 export interface Marker {
