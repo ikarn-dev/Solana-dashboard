@@ -147,27 +147,27 @@ export function HomeValidators() {
                       {validator.pictureURL ? (
                         <img 
                           src={validator.pictureURL} 
-                          alt={validator.moniker || 'Validator'} 
+                          alt={validator.name || 'Validator'} 
                           className="w-8 h-8 rounded-full object-cover border border-lime-200"
                         />
                       ) : (
                         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-lime-100 to-lime-200 flex items-center justify-center border border-lime-200 overflow-hidden">
                           <span className="text-xs font-bold text-lime-600 truncate max-w-[90%]">
-                            {(validator.moniker || validator.votePubkey.slice(0, 1)).toUpperCase()}
+                            {(validator.name || validator.votePubkey.slice(0, 1)).toUpperCase()}
                           </span>
                         </div>
                       )}
                       <span className="font-mono">
-                        {validator.moniker || validator.votePubkey.slice(0, 8) + '...' + validator.votePubkey.slice(-8)}
+                        {validator.name || validator.votePubkey.slice(0, 8) + '...' + validator.votePubkey.slice(-8)}
                       </span>
                     </a>
                   </td>
-                  <td className="py-3 font-mono">{formatExactNumber(validator.activatedStake)} SOL</td>
-                  <td className="py-3 font-mono">{formatExactNumber(validator.delegatorCount)}</td>
+                  <td className="py-3 font-mono">{formatExactNumber(Number(validator.activatedStake))} SOL</td>
+                  <td className="py-3 font-mono">{formatExactNumber(Number(validator.delegatorCount))}</td>
                   <td className="py-3 font-mono">{validator.commission}%</td>
                   <td className="py-3 font-mono">{validator.version}</td>
                   <td className="py-3 text-gray-500">
-                    {new Date(validator.lastVote * 1000).toLocaleTimeString()}
+                    {new Date(Number(validator.lastVote) * 1000).toLocaleTimeString()}
                   </td>
                 </tr>
               ))}
